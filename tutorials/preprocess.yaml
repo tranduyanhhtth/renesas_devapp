@@ -1,0 +1,58 @@
+input_to_pre:
+- name: in
+  shape:
+  - 480
+  - 640
+  - 3
+  order: HWC
+  type: uint8
+  format: BGR
+input_to_body:
+- name: out
+  shape:
+  - 3
+  - 640
+  - 640
+  order: CHW
+  type: fp32
+  format: RGB
+output_from_body: []
+output_from_post: []
+preprocess:
+- src:
+  - in
+  dest:
+  - out
+  operations:
+  - op: resize_hwc
+    param:
+      shape_out:
+      - 640
+      - 640
+      RESIZE_ALG: 1
+      DATA_TYPE: 0
+  - op: cast_any_to_fp16
+    param:
+      DIN_FORMAT: 0
+  - op: normalize
+    param:
+      IMG_ICH_ORG: 0
+      IMG_OCH_ORG: 0
+      DIN_FORMAT: 0
+      DOUT_RGB_ORDER: 1
+      cof_add:
+      - -123.675
+      - -116.28
+      - -103.53
+      cof_mul:
+      - 0.017124753831663668
+      - 0.01750700280112045
+      - 0.017429193899782137
+  - op: transpose
+    param:
+      WORD_SIZE: 1
+      IS_CHW2HWC: 0
+  - op: cast_fp16_fp32
+    param:
+      CAST_MODE: 0
+postprocess: []

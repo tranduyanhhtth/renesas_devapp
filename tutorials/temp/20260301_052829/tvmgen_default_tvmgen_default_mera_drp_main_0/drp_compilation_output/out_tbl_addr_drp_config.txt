@@ -1,0 +1,4 @@
+transpose.mem                       62916672     134128
+actfunc.mem                         63050800     174860
+maxpooling_k5_st1.mem               63225664     118844
+resize_onnx.mem                     63344512     167632

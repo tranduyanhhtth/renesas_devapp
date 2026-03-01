@@ -1,0 +1,10 @@
+*.so
+*.pt
+tvm/build/
+__pycache__/
+convert/repos/
+*.so
+*.pt
+tvm/build/
+convert/repos/
+__pycache__/
