@@ -1,0 +1,14 @@
+[Unit]
+Description=Starting RZV2L  application
+After=sys-devices-platform-soc-11c60000.usb-udc-11c60000.usb.device
+Requires=weston@root.service
+
+[Service]
+#Restart=on-failure
+#Type=forking
+ExecStart=/home/root/Scripts/autostart_app_launch.sh
+RestartSec=1
+
+[Install]
+WantedBy=multi-user.target
+
