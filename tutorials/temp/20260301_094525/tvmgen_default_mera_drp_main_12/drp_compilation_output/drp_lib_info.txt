@@ -1,0 +1,28 @@
+5  # driver version  v0.2 
+20  # driver version >v0.3
+# transpose  [MASK : ON]
+# actfunc  [MASK : ON]
+# resize_onnx  [MASK : ON]
+# transpose  [MASK : ON]
+# transpose  [MASK : ON]
+# ============================
+# Address data in drp_param.bin
+# DRP LIB name[Layer Name]
+# [Start position], [Size(Byte)], [Param name], [Value]
+transpose[post_0_0_transpose]
+Start:0[Byte],Size:4[Byte],Param:raddr,Value:0x8229780
+Start:4[Byte],Size:4[Byte],Param:waddr,Value:0x82bf780
+actfunc[mul_4]
+Start:56[Byte],Size:4[Byte],Param:raddr,Value:0x8355780
+Start:60[Byte],Size:4[Byte],Param:waddr,Value:0x83b9780
+Start:108[Byte],Size:4[Byte],Param:PRELU_WEIGHT_ADDR,Value:0x0
+Start:116[Byte],Size:4[Byte],Param:BNORM_ADDR,Value:0x0
+resize_onnx[resize_5]
+Start:120[Byte],Size:4[Byte],Param:raddr,Value:0x83b9780
+Start:124[Byte],Size:4[Byte],Param:waddr,Value:0x841d780
+transpose[post_0_0_transpose]
+Start:176[Byte],Size:4[Byte],Param:raddr,Value:0x841d780
+Start:180[Byte],Size:4[Byte],Param:waddr,Value:0x85ad780
+transpose[post_1_0_transpose]
+Start:232[Byte],Size:4[Byte],Param:raddr,Value:0x83b9780
+Start:236[Byte],Size:4[Byte],Param:waddr,Value:0x873d780

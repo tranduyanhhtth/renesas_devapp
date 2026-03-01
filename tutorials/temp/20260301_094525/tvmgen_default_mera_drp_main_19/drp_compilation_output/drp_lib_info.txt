@@ -1,0 +1,58 @@
+10  # driver version  v0.2 
+40  # driver version >v0.3
+# transpose  [MASK : ON]
+# actfunc  [MASK : ON]
+# actfunc  [MASK : ON]
+# actfunc  [MASK : ON]
+# actfunc  [MASK : ON]
+# actfunc  [MASK : ON]
+# actfunc  [MASK : ON]
+# transpose  [MASK : ON]
+# transpose  [MASK : ON]
+# transpose  [MASK : ON]
+# ============================
+# Address data in drp_param.bin
+# DRP LIB name[Layer Name]
+# [Start position], [Size(Byte)], [Param name], [Value]
+transpose[post_0_0_transpose]
+Start:0[Byte],Size:4[Byte],Param:raddr,Value:0xda42c0
+Start:4[Byte],Size:4[Byte],Param:waddr,Value:0xed02c0
+actfunc[mul_4]
+Start:56[Byte],Size:4[Byte],Param:raddr,Value:0xffc2c0
+Start:60[Byte],Size:4[Byte],Param:waddr,Value:0x10c42c0
+Start:108[Byte],Size:4[Byte],Param:PRELU_WEIGHT_ADDR,Value:0x0
+Start:116[Byte],Size:4[Byte],Param:BNORM_ADDR,Value:0x0
+actfunc[mul_9]
+Start:120[Byte],Size:4[Byte],Param:raddr,Value:0x118c2c0
+Start:124[Byte],Size:4[Byte],Param:waddr,Value:0x12542c0
+Start:172[Byte],Size:4[Byte],Param:PRELU_WEIGHT_ADDR,Value:0x0
+Start:180[Byte],Size:4[Byte],Param:BNORM_ADDR,Value:0x0
+actfunc[mul_14]
+Start:184[Byte],Size:4[Byte],Param:raddr,Value:0x131c2c0
+Start:188[Byte],Size:4[Byte],Param:waddr,Value:0x13e42c0
+Start:236[Byte],Size:4[Byte],Param:PRELU_WEIGHT_ADDR,Value:0x0
+Start:244[Byte],Size:4[Byte],Param:BNORM_ADDR,Value:0x0
+actfunc[mul_22]
+Start:248[Byte],Size:4[Byte],Param:raddr,Value:0x14ac2c0
+Start:252[Byte],Size:4[Byte],Param:waddr,Value:0x15a62c0
+Start:300[Byte],Size:4[Byte],Param:PRELU_WEIGHT_ADDR,Value:0x0
+Start:308[Byte],Size:4[Byte],Param:BNORM_ADDR,Value:0x0
+actfunc[mul_27]
+Start:312[Byte],Size:4[Byte],Param:raddr,Value:0x16a02c0
+Start:316[Byte],Size:4[Byte],Param:waddr,Value:0x179a2c0
+Start:364[Byte],Size:4[Byte],Param:PRELU_WEIGHT_ADDR,Value:0x0
+Start:372[Byte],Size:4[Byte],Param:BNORM_ADDR,Value:0x0
+actfunc[mul_35]
+Start:376[Byte],Size:4[Byte],Param:raddr,Value:0x18942c0
+Start:380[Byte],Size:4[Byte],Param:waddr,Value:0x1a882c0
+Start:428[Byte],Size:4[Byte],Param:PRELU_WEIGHT_ADDR,Value:0x0
+Start:436[Byte],Size:4[Byte],Param:BNORM_ADDR,Value:0x0
+transpose[post_0_0_transpose]
+Start:440[Byte],Size:4[Byte],Param:raddr,Value:0x18c62c0
+Start:444[Byte],Size:4[Byte],Param:waddr,Value:0x1aba2c0
+transpose[post_1_0_transpose]
+Start:496[Byte],Size:4[Byte],Param:raddr,Value:0x198e2c0
+Start:500[Byte],Size:4[Byte],Param:waddr,Value:0x1b822c0
+transpose[post_2_0_transpose]
+Start:552[Byte],Size:4[Byte],Param:raddr,Value:0x1a882c0
+Start:556[Byte],Size:4[Byte],Param:waddr,Value:0x1c7c2c0

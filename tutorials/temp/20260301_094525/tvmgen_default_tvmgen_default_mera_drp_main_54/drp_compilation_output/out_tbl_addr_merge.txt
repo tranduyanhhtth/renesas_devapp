@@ -1,0 +1,15 @@
+mera_drp_54_i0                      49097984
+conv2d_2                            49149184
+mul_4                               49200384
+conv2d_7                            49251584
+mul_9                               49302784
+add_10                              49353984
+from_tvm_0                          49046784
+to_tvm_0                            49405184
+zero                                49456384
+conv2d_2_o0_k0_i0_param             49456384
+conv2d_2_o1_k0_i0_param             49530304
+conv2d_7_o0_k0_i0_param             49604224
+conv2d_7_o1_k0_i0_param             49678144
+transpose.mem                       49752064     134128
+actfunc.mem                         49886192     174860

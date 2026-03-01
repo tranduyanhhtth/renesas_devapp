@@ -1,0 +1,10 @@
+conv2d_2_o0_k0_i0_param             15036768
+conv2d_7_o0_k0_i0_param             15042976
+conv2d_12_o0_k0_i0_param            15080032
+conv2d_17_o0_k0_i0_param            15117088
+conv2d_20_o0_k0_i0_param            15121248
+conv2d_20_o1_k0_i0_param            15158304
+conv2d_25_o0_k0_i0_param            15167568
+conv2d_25_o1_k0_i0_param            15213840
+conv2d_30_o0_k0_i0_param            15225408
+conv2d_33_o0_k0_i0_param            15231888

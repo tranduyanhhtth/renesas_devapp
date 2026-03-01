@@ -1,0 +1,10 @@
+Input_node_name: from_tvm_0
+         Address: 0x76352c0
+         Channel: 1
+         Width  : 2
+         Height : 8400
+Input_node_name: from_tvm_1
+         Address: 0x763d600
+         Channel: 1
+         Width  : 2
+         Height : 8400

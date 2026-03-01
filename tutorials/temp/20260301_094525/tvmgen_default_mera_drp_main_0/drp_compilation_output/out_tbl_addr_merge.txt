@@ -1,0 +1,19 @@
+mera_drp_0_i0                       50217664
+conv2d_2                            50371264
+mul_4                               50473664
+conv2d_7                            50576064
+mul_9                               50627264
+maxpool2d_10                        50678464
+maxpool2d_11                        50729664
+maxpool2d_12                        50780864
+from_tvm_0                          50064064
+to_tvm_0                            50832064
+to_tvm_1                            50883264
+to_tvm_2                            50934464
+to_tvm_3                            50985664
+zero                                51036864
+conv2d_2_o0_k0_i0_param             51036864
+conv2d_7_o0_k0_i0_param             51135424
+transpose.mem                       51168320     134128
+actfunc.mem                         51302448     174860
+maxpooling_k5_st1.mem               51477312     118844

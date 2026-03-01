@@ -102,7 +102,7 @@ MeraDrpRuntimeWrapper runtime;
 PreRuntime preruntime;
 /*MMNGR buffer for DRP-AI Pre-processing*/
 static dma_buffer *drpai_buf;
- 
+
 /*Processing Time*/
 static double pre_time = 0;
 static double post_time = 0;
@@ -381,7 +381,7 @@ void R_Post_Proc(float* floatarr)
     /* This mutex processing is for measuring the exact processing time and is not suitable for production. */
     mtx.lock();
 
-    /* Following variables are required for correct_yolo_boxes in YOLOv5 implementation*/
+    /* Following variables are required for correct_yolo_boxes in Darknet implementation*/
     /* Note: This implementation refers to the "darknet detector test" */
     float new_w, new_h;
     float correct_w = 1.;
@@ -442,11 +442,13 @@ void R_Post_Proc(float* floatarr)
                     tw = floatarr[yolo_index(n, offs, 2)];
                     th = floatarr[yolo_index(n, offs, 3)];
                     /* Compute the bounding box */
-                    /*get_yolo_box*/
-                    center_x = ((float) x + 2*sigmoid(tx) - 0.5) / (float) num_grid;
-                    center_y = ((float) y + 2*sigmoid(ty) - 0.5) / (float) num_grid;
-                    box_w = (float) exp(2*sigmoid(tw)) * anchors[anchor_offset+2*b+0] / (float) MODEL_IN_W;
-                    box_h = (float) exp(2*sigmoid(th)) * anchors[anchor_offset+2*b+1] / (float) MODEL_IN_W;
+                    /* YOLOv5 decoding formula (differs from YOLOv3): */
+                    /* center: (grid + 2*sigmoid(t) - 0.5) / grid_size    */
+                    /* wh:     anchor * exp(2*sigmoid(t))^2               */
+                    center_x = ((float) x + 2.0f * sigmoid(tx) - 0.5f) / (float) num_grid;
+                    center_y = ((float) y + 2.0f * sigmoid(ty) - 0.5f) / (float) num_grid;
+                    box_w = (float)(exp(2.0f * sigmoid(tw)) * anchors[anchor_offset+2*b+0]) / (float) MODEL_IN_W;
+                    box_h = (float)(exp(2.0f * sigmoid(th)) * anchors[anchor_offset+2*b+1]) / (float) MODEL_IN_W;
                     /* Adjustment for VGA size */
                     /* correct_yolo_boxes */
                     center_x = (center_x - (MODEL_IN_W - new_w) / 2. / MODEL_IN_W) / ((float) new_w / MODEL_IN_W);
@@ -787,7 +789,7 @@ void *R_Inf_Thread(void *threadid)
             goto err;
         }
 
-        /*CPU Post-Processing For YOLOv5*/
+        /*CPU Post-Processing For YOLOv3*/
         R_Post_Proc(drpai_output_buf);
         
         /*Gets Post-process End Time*/
@@ -1354,7 +1356,7 @@ int32_t main(int32_t argc, char * argv[])
     gstreamer_pipeline = "v4l2src device=" + media_port +" io-mode=dmabuf ! video/x-raw, width="+std::to_string(CAM_IMAGE_WIDTH)+", height="+std::to_string(CAM_IMAGE_HEIGHT)+" ,framerate=30/1 ! videoconvert ! appsink -v";
 
     printf("RZ/V AI SDK Sample Application\n");
-    printf("Model : YOLOv5 | %s\n", model_dir.c_str());
+    printf("Model : YOLOv5s | %s\n", model_dir.c_str());
     printf("Input : %s\n", INPUT_CAM_NAME);
 
     /* DRP-AI Frequency Setting */

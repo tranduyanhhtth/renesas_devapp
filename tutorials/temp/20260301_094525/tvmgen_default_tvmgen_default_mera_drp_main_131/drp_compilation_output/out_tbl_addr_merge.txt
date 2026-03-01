@@ -1,0 +1,14 @@
+mera_drp_131_i0                     64464288
+conv2d_2                            64515488
+mul_4                               64566688
+conv2d_7                            64617888
+mul_9                               64669088
+from_tvm_0                          64413088
+to_tvm_0                            64720288
+zero                                64771488
+conv2d_2_o0_k0_i0_param             64771488
+conv2d_2_o1_k0_i0_param             64845408
+conv2d_7_o0_k0_i0_param             64919328
+conv2d_7_o1_k0_i0_param             64993248
+transpose.mem                       65067168     134128
+actfunc.mem                         65201296     174860

@@ -1,0 +1,50 @@
+10  # driver version  v0.2 
+40  # driver version >v0.3
+# transpose  [MASK : ON]
+# actfunc  [MASK : ON]
+# actfunc  [MASK : ON]
+# maxpooling_k5_st1  [MASK : ON]
+# maxpooling_k5_st1  [MASK : ON]
+# maxpooling_k5_st1  [MASK : ON]
+# transpose  [MASK : ON]
+# transpose  [MASK : ON]
+# transpose  [MASK : ON]
+# transpose  [MASK : ON]
+# ============================
+# Address data in drp_param.bin
+# DRP LIB name[Layer Name]
+# [Start position], [Size(Byte)], [Param name], [Value]
+transpose[post_0_0_transpose]
+Start:0[Byte],Size:4[Byte],Param:raddr,Value:0x5f7d580
+Start:4[Byte],Size:4[Byte],Param:waddr,Value:0x5fc8580
+actfunc[mul_4]
+Start:56[Byte],Size:4[Byte],Param:raddr,Value:0x6013580
+Start:60[Byte],Size:4[Byte],Param:waddr,Value:0x6045580
+Start:108[Byte],Size:4[Byte],Param:PRELU_WEIGHT_ADDR,Value:0x0
+Start:116[Byte],Size:4[Byte],Param:BNORM_ADDR,Value:0x0
+actfunc[mul_9]
+Start:120[Byte],Size:4[Byte],Param:raddr,Value:0x6077580
+Start:124[Byte],Size:4[Byte],Param:waddr,Value:0x6090580
+Start:172[Byte],Size:4[Byte],Param:PRELU_WEIGHT_ADDR,Value:0x0
+Start:180[Byte],Size:4[Byte],Param:BNORM_ADDR,Value:0x0
+maxpooling_k5_st1[maxpool2d_10]
+Start:184[Byte],Size:4[Byte],Param:raddr,Value:0x6090580
+Start:188[Byte],Size:4[Byte],Param:waddr,Value:0x60a9580
+maxpooling_k5_st1[maxpool2d_11]
+Start:240[Byte],Size:4[Byte],Param:raddr,Value:0x60a9580
+Start:244[Byte],Size:4[Byte],Param:waddr,Value:0x60c2580
+maxpooling_k5_st1[maxpool2d_12]
+Start:296[Byte],Size:4[Byte],Param:raddr,Value:0x60c2580
+Start:300[Byte],Size:4[Byte],Param:waddr,Value:0x60db580
+transpose[post_0_0_transpose]
+Start:352[Byte],Size:4[Byte],Param:raddr,Value:0x6090580
+Start:356[Byte],Size:4[Byte],Param:waddr,Value:0x60f4580
+transpose[post_1_0_transpose]
+Start:408[Byte],Size:4[Byte],Param:raddr,Value:0x60a9580
+Start:412[Byte],Size:4[Byte],Param:waddr,Value:0x610d580
+transpose[post_2_0_transpose]
+Start:464[Byte],Size:4[Byte],Param:raddr,Value:0x60c2580
+Start:468[Byte],Size:4[Byte],Param:waddr,Value:0x6126580
+transpose[post_3_0_transpose]
+Start:520[Byte],Size:4[Byte],Param:raddr,Value:0x60db580
+Start:524[Byte],Size:4[Byte],Param:waddr,Value:0x613f580

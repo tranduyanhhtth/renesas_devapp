@@ -1,0 +1,12 @@
+mera_drp_81_i0                      65583296
+conv2d_2                            65788096
+mul_4                               65992896
+conv2d_7                            66197696
+mul_9                               66402496
+from_tvm_0                          65378496
+to_tvm_0                            66607296
+zero                                66812096
+conv2d_2_o0_k0_i0_param             66812096
+conv2d_7_o0_k0_i0_param             66821408
+transpose.mem                       66830720     134128
+actfunc.mem                         66964848     174860

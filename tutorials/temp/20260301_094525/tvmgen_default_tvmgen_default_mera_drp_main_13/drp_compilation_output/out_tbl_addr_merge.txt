@@ -1,0 +1,15 @@
+mera_drp_13_i0                      24279200
+conv2d_2                            25508000
+mul_4                               26327200
+conv2d_7                            27146400
+mul_9                               27556000
+conv2d_12                           27965600
+mul_14                              28375200
+from_tvm_0                          23050400
+to_tvm_0                            28784800
+zero                                29194400
+conv2d_2_o0_k0_i0_param             29194400
+conv2d_7_o0_k0_i0_param             29195968
+conv2d_12_o0_k0_i0_param            29214592
+transpose.mem                       29218752     134128
+actfunc.mem                         29352880     174860

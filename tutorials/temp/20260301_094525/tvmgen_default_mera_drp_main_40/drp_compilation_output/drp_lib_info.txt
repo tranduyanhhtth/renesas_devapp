@@ -1,0 +1,58 @@
+10  # driver version  v0.2 
+40  # driver version >v0.3
+# transpose  [MASK : ON]
+# actfunc  [MASK : ON]
+# actfunc  [MASK : ON]
+# actfunc  [MASK : ON]
+# actfunc  [MASK : ON]
+# actfunc  [MASK : ON]
+# actfunc  [MASK : ON]
+# transpose  [MASK : ON]
+# transpose  [MASK : ON]
+# transpose  [MASK : ON]
+# ============================
+# Address data in drp_param.bin
+# DRP LIB name[Layer Name]
+# [Start position], [Size(Byte)], [Param name], [Value]
+transpose[post_0_0_transpose]
+Start:0[Byte],Size:4[Byte],Param:raddr,Value:0x74f340
+Start:4[Byte],Size:4[Byte],Param:waddr,Value:0x7e5340
+actfunc[mul_4]
+Start:56[Byte],Size:4[Byte],Param:raddr,Value:0x87b340
+Start:60[Byte],Size:4[Byte],Param:waddr,Value:0x8df340
+Start:108[Byte],Size:4[Byte],Param:PRELU_WEIGHT_ADDR,Value:0x0
+Start:116[Byte],Size:4[Byte],Param:BNORM_ADDR,Value:0x0
+actfunc[mul_9]
+Start:120[Byte],Size:4[Byte],Param:raddr,Value:0x943340
+Start:124[Byte],Size:4[Byte],Param:waddr,Value:0x975340
+Start:172[Byte],Size:4[Byte],Param:PRELU_WEIGHT_ADDR,Value:0x0
+Start:180[Byte],Size:4[Byte],Param:BNORM_ADDR,Value:0x0
+actfunc[mul_14]
+Start:184[Byte],Size:4[Byte],Param:raddr,Value:0x9a7340
+Start:188[Byte],Size:4[Byte],Param:waddr,Value:0x9d9340
+Start:236[Byte],Size:4[Byte],Param:PRELU_WEIGHT_ADDR,Value:0x0
+Start:244[Byte],Size:4[Byte],Param:BNORM_ADDR,Value:0x0
+actfunc[mul_22]
+Start:248[Byte],Size:4[Byte],Param:raddr,Value:0xa0b340
+Start:252[Byte],Size:4[Byte],Param:waddr,Value:0xa49b40
+Start:300[Byte],Size:4[Byte],Param:PRELU_WEIGHT_ADDR,Value:0x0
+Start:308[Byte],Size:4[Byte],Param:BNORM_ADDR,Value:0x0
+actfunc[mul_27]
+Start:312[Byte],Size:4[Byte],Param:raddr,Value:0xa88340
+Start:316[Byte],Size:4[Byte],Param:waddr,Value:0xac6b40
+Start:364[Byte],Size:4[Byte],Param:PRELU_WEIGHT_ADDR,Value:0x0
+Start:372[Byte],Size:4[Byte],Param:BNORM_ADDR,Value:0x0
+actfunc[mul_35]
+Start:376[Byte],Size:4[Byte],Param:raddr,Value:0xb05340
+Start:380[Byte],Size:4[Byte],Param:waddr,Value:0xb8eb40
+Start:428[Byte],Size:4[Byte],Param:PRELU_WEIGHT_ADDR,Value:0x0
+Start:436[Byte],Size:4[Byte],Param:BNORM_ADDR,Value:0x0
+transpose[post_0_0_transpose]
+Start:440[Byte],Size:4[Byte],Param:raddr,Value:0xb1e340
+Start:444[Byte],Size:4[Byte],Param:waddr,Value:0xba7b40
+transpose[post_1_0_transpose]
+Start:496[Byte],Size:4[Byte],Param:raddr,Value:0xb50340
+Start:500[Byte],Size:4[Byte],Param:waddr,Value:0xbd9b40
+transpose[post_2_0_transpose]
+Start:552[Byte],Size:4[Byte],Param:raddr,Value:0xb8eb40
+Start:556[Byte],Size:4[Byte],Param:waddr,Value:0xc18340

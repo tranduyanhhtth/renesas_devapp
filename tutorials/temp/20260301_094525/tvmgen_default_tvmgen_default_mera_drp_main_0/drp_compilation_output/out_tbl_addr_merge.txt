@@ -1,0 +1,17 @@
+post_0_0_cast_fp16_fp32             35580000
+mera_drp_0_i0                       36808800
+conv2d_2                            38037600
+mul_4                               39676000
+conv2d_7                            41314400
+mul_9                               42133600
+conv2d_12                           42952800
+mul_14                              43772000
+from_tvm_0                          33122400
+to_tvm_0                            44591200
+zero                                45410400
+conv2d_2_o0_k0_i0_param             45410400
+conv2d_7_o0_k0_i0_param             45410880
+conv2d_12_o0_k0_i0_param            45415584
+cast_fp16_fp32.mem                  45416640     101648
+transpose.mem                       45518288     134128
+actfunc.mem                         45652416     174860

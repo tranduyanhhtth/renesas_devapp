@@ -19,9 +19,9 @@
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
- * under the License. 
+ * under the License.
  *
- */ 
+ */
 /***********************************************************************************************************************
 * DISCLAIMER
 * This software is supplied by Renesas Electronics Corporation and is only intended for use with Renesas products. No
@@ -88,10 +88,11 @@
 *  - model_dir = directory name of DRP-AI TVM[*1] Model Object files
 ******************************************/
 /* Model Binary */
-const static std::string model_dir = "yolov5_onnx";
+const static std::string model_dir = "yolov5s_onnx";
 /* Pre-processing Runtime Object */
 const static std::string pre_dir = model_dir + "/preprocess";
 /* Anchor box information */
+/* YOLOv5s COCO anchors: P3(small)/P4(medium)/P5(large) */
 const static double anchors[] =
 {
     10, 13,
@@ -103,7 +104,6 @@ const static double anchors[] =
     116, 90,
     156, 198,
     373, 326
-
 };
 /* Class labels to be classified */
 const static std::string label_list = "coco-labels-2014_2017.txt";
@@ -153,11 +153,12 @@ static std::vector<std::string> label_file_map = {};
 /* Thresholds */
 #define TH_PROB                     (0.5f)
 #define TH_NMS                      (0.5f)
-/* Size of input image to the model */
+/* Size of input image to the model (YOLOv5s default: 640x640) */
 #define MODEL_IN_W                  (640)
 #define MODEL_IN_H                  (640)
 
 /* Number of grids in the image. The length of this array MUST match with the NUM_INF_OUT_LAYER */
+/* YOLOv5: 640/32=20, 640/16=40, 640/8=80 */
 const static uint8_t num_grids[] = { 20, 40, 80 };
 /* Number of DRP-AI output */
 const static uint32_t INF_OUT_SIZE  = (NUM_CLASS + 5) * NUM_BB * num_grids[0] * num_grids[0]
