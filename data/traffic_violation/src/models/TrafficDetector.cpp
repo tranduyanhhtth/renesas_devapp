@@ -216,22 +216,20 @@ std::vector<detection> TrafficDetector::detect(const cv::Mat& frame)
     if (m_pre_ok)
     {
         /* DRP PreRuntime: resize+normalize trên hardware */
-        s_preruntime_in_t pre_in;
-        pre_in.src  = frame.data;
-        pre_in.w    = frame.cols;
-        pre_in.h    = frame.rows;
-        pre_in.c    = frame.channels();
-        pre_in.fmt  = INPUT_YUYV; /* camera raw; change to INPUT_BGR if frame is BGR */
-        /* For BGR frame from VideoCapture: */
-        pre_in.fmt  = INPUT_BGR;
-        int r = m_preruntime.Pre(&pre_in, nullptr, nullptr);
+        s_preproc_param_t pre_param;
+        pre_param.pre_in_addr = (uint64_t)frame.data;  /* BGR frame từ VideoCapture */
+
+        void*    out_ptr  = nullptr;
+        uint32_t out_size = 0;
+        uint8_t r = m_preruntime.Pre(&pre_param, &out_ptr, &out_size);
         if (r != 0) {
             /* PreRuntime failed → fall back to CPU */
             std::vector<float> cpu_in;
             cpuPreprocess(frame, cpu_in);
             m_runtime.SetInput(0, cpu_in.data());
+        } else {
+            m_runtime.SetInput(0, (float*)out_ptr);
         }
-        /* Else PreRuntime writes directly to DRP-AI input buffer */
     }
     else
     {

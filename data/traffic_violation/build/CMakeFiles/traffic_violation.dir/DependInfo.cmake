@@ -10,6 +10,11 @@ set(CMAKE_DEPENDS_CHECK_CXX
   "/drp-ai_tvm/data/traffic_violation/src/common/lp_text_proc_module/LpTextProc.cpp" "/drp-ai_tvm/data/traffic_violation/build/CMakeFiles/traffic_violation.dir/src/common/lp_text_proc_module/LpTextProc.cpp.o"
   "/drp-ai_tvm/data/traffic_violation/src/common/lp_validate_module/LpValidate.cpp" "/drp-ai_tvm/data/traffic_violation/build/CMakeFiles/traffic_violation.dir/src/common/lp_validate_module/LpValidate.cpp.o"
   "/drp-ai_tvm/data/traffic_violation/src/common/tess_module/TesseractEngine.cpp" "/drp-ai_tvm/data/traffic_violation/build/CMakeFiles/traffic_violation.dir/src/common/tess_module/TesseractEngine.cpp.o"
+  "/drp-ai_tvm/data/traffic_violation/src/drp/MeraDrpRuntimeWrapper.cpp" "/drp-ai_tvm/data/traffic_violation/build/CMakeFiles/traffic_violation.dir/src/drp/MeraDrpRuntimeWrapper.cpp.o"
+  "/drp-ai_tvm/data/traffic_violation/src/drp/PreRuntime.cpp" "/drp-ai_tvm/data/traffic_violation/build/CMakeFiles/traffic_violation.dir/src/drp/PreRuntime.cpp.o"
+  "/drp-ai_tvm/data/traffic_violation/src/drp/dmabuf.cpp" "/drp-ai_tvm/data/traffic_violation/build/CMakeFiles/traffic_violation.dir/src/drp/dmabuf.cpp.o"
+  "/drp-ai_tvm/data/traffic_violation/src/drp/image.cpp" "/drp-ai_tvm/data/traffic_violation/build/CMakeFiles/traffic_violation.dir/src/drp/image.cpp.o"
+  "/drp-ai_tvm/data/traffic_violation/src/drp/wayland.cpp" "/drp-ai_tvm/data/traffic_violation/build/CMakeFiles/traffic_violation.dir/src/drp/wayland.cpp.o"
   "/drp-ai_tvm/data/traffic_violation/src/main.cpp" "/drp-ai_tvm/data/traffic_violation/build/CMakeFiles/traffic_violation.dir/src/main.cpp.o"
   "/drp-ai_tvm/data/traffic_violation/src/models/TrafficDetector.cpp" "/drp-ai_tvm/data/traffic_violation/build/CMakeFiles/traffic_violation.dir/src/models/TrafficDetector.cpp.o"
   "/drp-ai_tvm/data/traffic_violation/src/models/box.cpp" "/drp-ai_tvm/data/traffic_violation/build/CMakeFiles/traffic_violation.dir/src/models/box.cpp.o"
@@ -23,11 +28,22 @@ set(CMAKE_DEPENDS_CHECK_CXX
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
 
+# Preprocessor definitions for this target.
+set(CMAKE_TARGET_DEFINITIONS_CXX
+  "WITH_DRP"
+  )
+
 # The include file search paths:
 set(CMAKE_CXX_TARGET_INCLUDE_PATH
-  "/usr/include/leptonica"
+  "/drp-ai_tvm/tvm/include"
+  "/drp-ai_tvm/tvm/3rdparty/dlpack/include"
+  "/drp-ai_tvm/tvm/3rdparty/dmlc-core/include"
+  "/drp-ai_tvm/tvm/3rdparty/compiler-rt"
+  "../src/drp"
+  "/opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/include/tesseract"
+  "/opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/include/leptonica"
   "../src"
-  "/usr/include/opencv4"
+  "/opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/include/opencv4"
   )
 
 # Targets to which this target links.

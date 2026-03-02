@@ -71,17 +71,14 @@ printf "motorbike\ncar\ntruck\nbus\nperson\nhelmet\nlicense_plate\n" \
 
 ## Bước 3 – Cross-compile binary
 
-```bash
-source /opt/poky/3.1.26/environment-setup-aarch64-poky-linux
+Chạy trong **Renesas AI SDK Docker container** (biến `$SDK`, `$TVM_HOME` đã set sẵn):
 
+```sh
 cd /drp-ai_tvm/data/traffic_violation
-cmake -B build_v2l \
-      -DWITH_DRP=ON \
-      -DCMAKE_TOOLCHAIN_FILE=toolchain/aarch64-cross.cmake \
-      -DCMAKE_BUILD_TYPE=Release
-cmake --build build_v2l -- -j4
-
-cp build_v2l/traffic_violation exe_v2l/traffic_violation_app
+mkdir -p build && cd build
+cmake -DCMAKE_TOOLCHAIN_FILE=../toolchain/aarch64-cross.cmake ..
+make -j$(nproc)
+cp traffic_violation ../exe_v2l/traffic_violation_app
 ```
 
 ---

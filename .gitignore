@@ -1,6 +1,7 @@
 *.so
 *.pt
 tvm/build/
+traffic_violation/build/
 __pycache__/
 convert/repos/
 *.so
