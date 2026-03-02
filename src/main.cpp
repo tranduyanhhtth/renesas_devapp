@@ -9,6 +9,9 @@
 #include <atomic>
 #include <chrono>
 #include <thread>
+#include <unistd.h>
+#include <climits>
+#include <libgen.h>
 
 #include "common/config.h"
 #include "common/types.h"
@@ -38,6 +41,22 @@
 
 static std::atomic<bool> g_running{true};
 static void sigHandler(int) { g_running = false; }
+
+static std::string exeDir()
+{
+    char buf[PATH_MAX] = {};
+    ssize_t n = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
+    if (n <= 0) return ".";
+    buf[n] = '\0';
+    return std::string(dirname(buf));
+}
+
+/* Nếu path đã là absolute thì giữ nguyên, nếu relative thì prefix bằng base */
+static std::string resolvePath(const std::string& base, const std::string& p)
+{
+    if (p.empty() || p[0] == '/') return p;
+    return base + "/" + p;
+}
 
 /* ---- HSV traffic light detection ---------------------------------------- */
 static TrafficLightState detectTrafficLight(const cv::Mat& frame,
@@ -133,10 +152,21 @@ int main(int argc, char* argv[])
     signal(SIGINT,  sigHandler);
     signal(SIGTERM, sigHandler);
 
-    std::string config_path = "config.yaml";
-    if (argc > 1) config_path = argv[1];
+    /* Thư mục chứa binary – dùng làm base cho mọi relative path */
+    const std::string base = exeDir();
+
+    /* Config: ưu tiên argument, fallback về <exe_dir>/config.yaml */
+    std::string config_path = (argc > 1) ? argv[1] : resolvePath(base, "config.yaml");
 
     AppConfig cfg = AppConfig::fromFile(config_path);
+
+    /* Resolve các path tương đối trong config theo thư mục binary */
+    cfg.detector.model_dir  = resolvePath(base, cfg.detector.model_dir);
+    cfg.detector.pre_dir    = resolvePath(base, cfg.detector.pre_dir);
+    cfg.detector.label_file = resolvePath(base, cfg.detector.label_file);
+    cfg.output.save_dir     = resolvePath(base, cfg.output.save_dir);
+
+    std::cout << "[Main] Exe dir : " << base << "\n";
     std::cout << "[Main] Config  : " << config_path << "\n";
     std::cout << "[Main] Model   : " << cfg.detector.model_dir << "\n";
     std::cout << "[Main] Input   : " << cfg.detector.input_width
