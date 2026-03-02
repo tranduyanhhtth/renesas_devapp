@@ -1,0 +1,83 @@
+##############################################################################
+# exe_v2l/config.yaml  - Deployment config for RZ/V2L board
+# Single model: custom YOLOv3 trained for traffic violation detection
+##############################################################################
+
+# -- Video input --------------------------------------------------------------
+video:
+  source: "/home/root/traffic_violation/input.mp4"
+  width:  640
+  height: 480
+  fps:    20
+  gstreamer_pipeline: ""
+
+# -- Unified detector (single model) -----------------------------------------
+detector:
+  model_dir:   "models/traffic_yolov3"
+  pre_dir:     "models/traffic_yolov3/preprocess"
+  label_file:  "models/traffic_yolov3/labels.txt"
+  input_width:  416
+  input_height: 416
+  drpai_freq:   2
+  conf_threshold: 0.50
+  nms_threshold:  0.45
+  num_class:   7
+  num_bb:      3
+  num_layers:  3
+  grids:       [13, 26, 52]
+  anchors:     [10,13, 16,30, 33,23, 30,61, 62,45, 59,119, 116,90, 156,198, 373,326]
+  class_motorbike:     0
+  class_car:           1
+  class_truck:         2
+  class_bus:           3
+  class_person:        4
+  class_helmet:        5
+  class_license_plate: 6
+
+# -- LP OCR -------------------------------------------------------------------
+enable_lp_ocr: true
+
+# -- DRP-AI hardware ----------------------------------------------------------
+drpai:
+  freq_index: 2
+  mem_offset: 0
+
+# -- Scene (adjust to actual camera) -----------------------------------------
+scene:
+  stop_line:
+    y1: 0.60
+    y2: 0.63
+
+  lane_zones:
+    motorbike: { x_min: 0.00, x_max: 0.55 }
+    car:       { x_min: 0.20, x_max: 0.80 }
+    truck:     { x_min: 0.20, x_max: 1.00 }
+
+  # Vạch phân làn tĩnh (điều chỉnh theo camera thực tế)
+  lane_lines:
+    - { x_norm: 0.33, overlap_px: 10 }
+    - { x_norm: 0.66, overlap_px: 10 }
+
+  traffic_light_roi:
+    x: 0.80
+    y: 0.05
+    w: 0.08
+    h: 0.20
+
+# -- Violation engine ---------------------------------------------------------
+violation:
+  rules:
+    helmet:     true
+    red_light:  true
+    wrong_lane: true
+    lane_line:  true
+  cooldown_sec:  5.0
+  confirm_frames: 3
+
+# -- Output -------------------------------------------------------------------
+output:
+  save_dir: "/home/root/traffic_violation/violations"
+  filename_pattern: "{plate}_{datetime}_{violation}"
+  save_full_frame: true
+  save_json: true
+  annotated_video: ""

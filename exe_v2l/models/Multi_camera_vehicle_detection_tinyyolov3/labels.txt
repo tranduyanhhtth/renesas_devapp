@@ -1,0 +1,10 @@
+bicycle
+motorbike
+car
+bus
+truck
+person
+rider
+cat
+dog
+traffic_light
