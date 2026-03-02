@@ -9,7 +9,8 @@ set(CMAKE_SYSTEM_PROCESSOR aarch64)
 set(MERA_DRP_RUNTIME ON)
 set(DCMAKE_SYSTEM_VERSION 1)
 
-# Đường dẫn Yocto SDK – set biến môi trường SDK trước khi cmake
+# SDK được set sẵn trong Docker container của Renesas AI SDK
+# ($SDK = /opt/poky/3.1.31)
 set(CMAKE_SYSROOT $ENV{SDK}/sysroots/aarch64-poky-linux)
 set(CMAKE_FIND_ROOT_PATH $ENV{SDK}/sysroots/aarch64-poky-linux)
 

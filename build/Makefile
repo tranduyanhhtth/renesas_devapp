@@ -39,10 +39,10 @@ cmake_force:
 SHELL = /bin/sh
 
 # The CMake executable.
-CMAKE_COMMAND = /usr/bin/cmake
+CMAKE_COMMAND = /opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/cmake
 
 # The command to remove a file.
-RM = /usr/bin/cmake -E remove -f
+RM = /opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/cmake -E remove -f
 
 # Escaping for special characters.
 EQUALS = =
@@ -59,38 +59,36 @@ CMAKE_BINARY_DIR = /drp-ai_tvm/data/traffic_violation/build
 # Special rule for the target install/strip
 install/strip: preinstall
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Installing the project stripped..."
-	/usr/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
 .PHONY : install/strip
 
 # Special rule for the target install/strip
 install/strip/fast: preinstall/fast
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Installing the project stripped..."
-	/usr/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
 .PHONY : install/strip/fast
 
-# Special rule for the target install/local
-install/local: preinstall
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Installing only the local directory..."
-	/usr/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
-.PHONY : install/local
+# Special rule for the target edit_cache
+edit_cache:
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "No interactive CMake dialog available..."
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/cmake -E echo No\ interactive\ CMake\ dialog\ available.
+.PHONY : edit_cache
 
-# Special rule for the target install/local
-install/local/fast: preinstall/fast
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Installing only the local directory..."
-	/usr/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
-.PHONY : install/local/fast
+# Special rule for the target edit_cache
+edit_cache/fast: edit_cache
 
-# Special rule for the target install
-install: preinstall
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Install the project..."
-	/usr/bin/cmake -P cmake_install.cmake
-.PHONY : install
+.PHONY : edit_cache/fast
 
-# Special rule for the target install
-install/fast: preinstall/fast
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Install the project..."
-	/usr/bin/cmake -P cmake_install.cmake
-.PHONY : install/fast
+# Special rule for the target rebuild_cache
+rebuild_cache:
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake to regenerate build system..."
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/cmake -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
+.PHONY : rebuild_cache
+
+# Special rule for the target rebuild_cache
+rebuild_cache/fast: rebuild_cache
+
+.PHONY : rebuild_cache/fast
 
 # Special rule for the target list_install_components
 list_install_components:
@@ -102,27 +100,29 @@ list_install_components/fast: list_install_components
 
 .PHONY : list_install_components/fast
 
-# Special rule for the target rebuild_cache
-rebuild_cache:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake to regenerate build system..."
-	/usr/bin/cmake -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
-.PHONY : rebuild_cache
+# Special rule for the target install/local
+install/local: preinstall
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Installing only the local directory..."
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
+.PHONY : install/local
 
-# Special rule for the target rebuild_cache
-rebuild_cache/fast: rebuild_cache
+# Special rule for the target install/local
+install/local/fast: preinstall/fast
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Installing only the local directory..."
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
+.PHONY : install/local/fast
 
-.PHONY : rebuild_cache/fast
+# Special rule for the target install
+install: preinstall
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Install the project..."
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/cmake -P cmake_install.cmake
+.PHONY : install
 
-# Special rule for the target edit_cache
-edit_cache:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "No interactive CMake dialog available..."
-	/usr/bin/cmake -E echo No\ interactive\ CMake\ dialog\ available.
-.PHONY : edit_cache
-
-# Special rule for the target edit_cache
-edit_cache/fast: edit_cache
-
-.PHONY : edit_cache/fast
+# Special rule for the target install
+install/fast: preinstall/fast
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Install the project..."
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/cmake -P cmake_install.cmake
+.PHONY : install/fast
 
 # The main all target
 all: cmake_check_build_system
@@ -330,6 +330,141 @@ src/common/tess_module/TesseractEngine.s: src/common/tess_module/TesseractEngine
 src/common/tess_module/TesseractEngine.cpp.s:
 	$(MAKE) -f CMakeFiles/traffic_violation.dir/build.make CMakeFiles/traffic_violation.dir/src/common/tess_module/TesseractEngine.cpp.s
 .PHONY : src/common/tess_module/TesseractEngine.cpp.s
+
+src/drp/MeraDrpRuntimeWrapper.o: src/drp/MeraDrpRuntimeWrapper.cpp.o
+
+.PHONY : src/drp/MeraDrpRuntimeWrapper.o
+
+# target to build an object file
+src/drp/MeraDrpRuntimeWrapper.cpp.o:
+	$(MAKE) -f CMakeFiles/traffic_violation.dir/build.make CMakeFiles/traffic_violation.dir/src/drp/MeraDrpRuntimeWrapper.cpp.o
+.PHONY : src/drp/MeraDrpRuntimeWrapper.cpp.o
+
+src/drp/MeraDrpRuntimeWrapper.i: src/drp/MeraDrpRuntimeWrapper.cpp.i
+
+.PHONY : src/drp/MeraDrpRuntimeWrapper.i
+
+# target to preprocess a source file
+src/drp/MeraDrpRuntimeWrapper.cpp.i:
+	$(MAKE) -f CMakeFiles/traffic_violation.dir/build.make CMakeFiles/traffic_violation.dir/src/drp/MeraDrpRuntimeWrapper.cpp.i
+.PHONY : src/drp/MeraDrpRuntimeWrapper.cpp.i
+
+src/drp/MeraDrpRuntimeWrapper.s: src/drp/MeraDrpRuntimeWrapper.cpp.s
+
+.PHONY : src/drp/MeraDrpRuntimeWrapper.s
+
+# target to generate assembly for a file
+src/drp/MeraDrpRuntimeWrapper.cpp.s:
+	$(MAKE) -f CMakeFiles/traffic_violation.dir/build.make CMakeFiles/traffic_violation.dir/src/drp/MeraDrpRuntimeWrapper.cpp.s
+.PHONY : src/drp/MeraDrpRuntimeWrapper.cpp.s
+
+src/drp/PreRuntime.o: src/drp/PreRuntime.cpp.o
+
+.PHONY : src/drp/PreRuntime.o
+
+# target to build an object file
+src/drp/PreRuntime.cpp.o:
+	$(MAKE) -f CMakeFiles/traffic_violation.dir/build.make CMakeFiles/traffic_violation.dir/src/drp/PreRuntime.cpp.o
+.PHONY : src/drp/PreRuntime.cpp.o
+
+src/drp/PreRuntime.i: src/drp/PreRuntime.cpp.i
+
+.PHONY : src/drp/PreRuntime.i
+
+# target to preprocess a source file
+src/drp/PreRuntime.cpp.i:
+	$(MAKE) -f CMakeFiles/traffic_violation.dir/build.make CMakeFiles/traffic_violation.dir/src/drp/PreRuntime.cpp.i
+.PHONY : src/drp/PreRuntime.cpp.i
+
+src/drp/PreRuntime.s: src/drp/PreRuntime.cpp.s
+
+.PHONY : src/drp/PreRuntime.s
+
+# target to generate assembly for a file
+src/drp/PreRuntime.cpp.s:
+	$(MAKE) -f CMakeFiles/traffic_violation.dir/build.make CMakeFiles/traffic_violation.dir/src/drp/PreRuntime.cpp.s
+.PHONY : src/drp/PreRuntime.cpp.s
+
+src/drp/dmabuf.o: src/drp/dmabuf.cpp.o
+
+.PHONY : src/drp/dmabuf.o
+
+# target to build an object file
+src/drp/dmabuf.cpp.o:
+	$(MAKE) -f CMakeFiles/traffic_violation.dir/build.make CMakeFiles/traffic_violation.dir/src/drp/dmabuf.cpp.o
+.PHONY : src/drp/dmabuf.cpp.o
+
+src/drp/dmabuf.i: src/drp/dmabuf.cpp.i
+
+.PHONY : src/drp/dmabuf.i
+
+# target to preprocess a source file
+src/drp/dmabuf.cpp.i:
+	$(MAKE) -f CMakeFiles/traffic_violation.dir/build.make CMakeFiles/traffic_violation.dir/src/drp/dmabuf.cpp.i
+.PHONY : src/drp/dmabuf.cpp.i
+
+src/drp/dmabuf.s: src/drp/dmabuf.cpp.s
+
+.PHONY : src/drp/dmabuf.s
+
+# target to generate assembly for a file
+src/drp/dmabuf.cpp.s:
+	$(MAKE) -f CMakeFiles/traffic_violation.dir/build.make CMakeFiles/traffic_violation.dir/src/drp/dmabuf.cpp.s
+.PHONY : src/drp/dmabuf.cpp.s
+
+src/drp/image.o: src/drp/image.cpp.o
+
+.PHONY : src/drp/image.o
+
+# target to build an object file
+src/drp/image.cpp.o:
+	$(MAKE) -f CMakeFiles/traffic_violation.dir/build.make CMakeFiles/traffic_violation.dir/src/drp/image.cpp.o
+.PHONY : src/drp/image.cpp.o
+
+src/drp/image.i: src/drp/image.cpp.i
+
+.PHONY : src/drp/image.i
+
+# target to preprocess a source file
+src/drp/image.cpp.i:
+	$(MAKE) -f CMakeFiles/traffic_violation.dir/build.make CMakeFiles/traffic_violation.dir/src/drp/image.cpp.i
+.PHONY : src/drp/image.cpp.i
+
+src/drp/image.s: src/drp/image.cpp.s
+
+.PHONY : src/drp/image.s
+
+# target to generate assembly for a file
+src/drp/image.cpp.s:
+	$(MAKE) -f CMakeFiles/traffic_violation.dir/build.make CMakeFiles/traffic_violation.dir/src/drp/image.cpp.s
+.PHONY : src/drp/image.cpp.s
+
+src/drp/wayland.o: src/drp/wayland.cpp.o
+
+.PHONY : src/drp/wayland.o
+
+# target to build an object file
+src/drp/wayland.cpp.o:
+	$(MAKE) -f CMakeFiles/traffic_violation.dir/build.make CMakeFiles/traffic_violation.dir/src/drp/wayland.cpp.o
+.PHONY : src/drp/wayland.cpp.o
+
+src/drp/wayland.i: src/drp/wayland.cpp.i
+
+.PHONY : src/drp/wayland.i
+
+# target to preprocess a source file
+src/drp/wayland.cpp.i:
+	$(MAKE) -f CMakeFiles/traffic_violation.dir/build.make CMakeFiles/traffic_violation.dir/src/drp/wayland.cpp.i
+.PHONY : src/drp/wayland.cpp.i
+
+src/drp/wayland.s: src/drp/wayland.cpp.s
+
+.PHONY : src/drp/wayland.s
+
+# target to generate assembly for a file
+src/drp/wayland.cpp.s:
+	$(MAKE) -f CMakeFiles/traffic_violation.dir/build.make CMakeFiles/traffic_violation.dir/src/drp/wayland.cpp.s
+.PHONY : src/drp/wayland.cpp.s
 
 src/main.o: src/main.cpp.o
 
@@ -608,12 +743,12 @@ help:
 	@echo "... clean"
 	@echo "... depend"
 	@echo "... install/strip"
-	@echo "... install/local"
-	@echo "... install"
-	@echo "... list_install_components"
-	@echo "... rebuild_cache"
 	@echo "... edit_cache"
 	@echo "... traffic_violation"
+	@echo "... rebuild_cache"
+	@echo "... list_install_components"
+	@echo "... install/local"
+	@echo "... install"
 	@echo "... src/VideoInput.o"
 	@echo "... src/VideoInput.i"
 	@echo "... src/VideoInput.s"
@@ -632,6 +767,21 @@ help:
 	@echo "... src/common/tess_module/TesseractEngine.o"
 	@echo "... src/common/tess_module/TesseractEngine.i"
 	@echo "... src/common/tess_module/TesseractEngine.s"
+	@echo "... src/drp/MeraDrpRuntimeWrapper.o"
+	@echo "... src/drp/MeraDrpRuntimeWrapper.i"
+	@echo "... src/drp/MeraDrpRuntimeWrapper.s"
+	@echo "... src/drp/PreRuntime.o"
+	@echo "... src/drp/PreRuntime.i"
+	@echo "... src/drp/PreRuntime.s"
+	@echo "... src/drp/dmabuf.o"
+	@echo "... src/drp/dmabuf.i"
+	@echo "... src/drp/dmabuf.s"
+	@echo "... src/drp/image.o"
+	@echo "... src/drp/image.i"
+	@echo "... src/drp/image.s"
+	@echo "... src/drp/wayland.o"
+	@echo "... src/drp/wayland.i"
+	@echo "... src/drp/wayland.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"

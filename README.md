@@ -151,26 +151,32 @@ models/traffic_yolov3/
 
 ## Build
 
-### Host x86_64 (không cần DRP-AI)
+> Tất cả lệnh dưới đây chạy trong **Renesas AI SDK Docker container**.  
+> Biến `$SDK` và `$TVM_HOME` đã được set sẵn trong container.
 
-```bash
+### Cross-compile cho RZ/V2L (aarch64)
+
+```sh
+cd /drp-ai_tvm/data/traffic_violation
 mkdir -p build && cd build
-cmake .. -DWITH_DRP=OFF -DCMAKE_BUILD_TYPE=Debug
-cmake --build . -- -j4
+cmake -DCMAKE_TOOLCHAIN_FILE=../toolchain/aarch64-cross.cmake ..
+make -j$(nproc)
 ```
 
-Yêu cầu: `libopencv-dev`, `libyaml-cpp-dev` (hoặc bundled), `libtesseract-dev`
+Binary được tạo tại `build/traffic_violation`. Copy vào thư mục deploy:
 
-### Cross-compile cho RZ/V2L
+```sh
+cp build/traffic_violation ../exe_v2l/traffic_violation_app
+```
 
-```bash
-source /opt/poky/3.1.26/environment-setup-aarch64-poky-linux
-cmake -B build_v2l \
-      -DWITH_DRP=ON \
-      -DCMAKE_TOOLCHAIN_FILE=toolchain/aarch64-cross.cmake \
-      -DCMAKE_BUILD_TYPE=Release
-cmake --build build_v2l -- -j4
-cp build_v2l/traffic_violation exe_v2l/traffic_violation_app
+### Host x86_64 – stub mode (không cần DRP-AI, để test)
+
+```sh
+sudo apt install -y libopencv-dev libtesseract-dev pkg-config
+cd /drp-ai_tvm/data/traffic_violation
+mkdir -p build_host && cd build_host
+cmake -DWITH_DRP=OFF ..
+make -j$(nproc)
 ```
 
 ---

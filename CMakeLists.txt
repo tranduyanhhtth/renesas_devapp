@@ -21,10 +21,15 @@ endif()
 
 # ── DRP-AI TVM runtime paths ───────────────────────────────────────────────────
 if(WITH_DRP)
-    set(TVM_ROOT ${CMAKE_SOURCE_DIR}/../../tvm)
+    # TVM_HOME được set sẵn trong Docker container ($TVM_HOME = /drp-ai_tvm/tvm)
+    if(DEFINED ENV{TVM_HOME})
+        set(TVM_ROOT $ENV{TVM_HOME})
+    else()
+        set(TVM_ROOT ${CMAKE_SOURCE_DIR}/../../tvm)
+    endif()
     set(RUNTIME_SRCS
-        src/drp/MeraDrpRuntimeWrapper.cpp   # copied from /drp-ai_tvm/apps/
-        src/drp/PreRuntime.cpp               # copied from /drp-ai_tvm/apps/
+        src/drp/MeraDrpRuntimeWrapper.cpp   
+        src/drp/PreRuntime.cpp               
         src/drp/wayland.cpp
         src/drp/dmabuf.cpp
         src/drp/image.cpp
@@ -33,6 +38,7 @@ if(WITH_DRP)
         ${TVM_ROOT}/include
         ${TVM_ROOT}/3rdparty/dlpack/include
         ${TVM_ROOT}/3rdparty/dmlc-core/include
+        ${TVM_ROOT}/3rdparty/compiler-rt          
         ${CMAKE_SOURCE_DIR}/src/drp
     )
     add_definitions(-DWITH_DRP)
@@ -65,6 +71,8 @@ set(SOURCES
 
 if(WITH_DRP)
     list(APPEND SOURCES ${RUNTIME_SRCS})
+    # lib64 chứa libmmngr, libmmngrbuf trên Renesas sysroot
+    link_directories($ENV{SDK}/sysroots/aarch64-poky-linux/usr/lib64)
 endif()
 
 # ── Include dirs ──────────────────────────────────────────────────────────────
@@ -99,6 +107,8 @@ if(WITH_DRP)
         EGL
         GLESv2
         wayland-egl
+        mmngr
+        mmngrbuf
     )
 endif()
 

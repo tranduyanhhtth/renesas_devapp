@@ -34,10 +34,10 @@ cmake_force:
 SHELL = /bin/sh
 
 # The CMake executable.
-CMAKE_COMMAND = /usr/bin/cmake
+CMAKE_COMMAND = /opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/cmake
 
 # The command to remove a file.
-RM = /usr/bin/cmake -E remove -f
+RM = /opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/cmake -E remove -f
 
 # Escaping for special characters.
 EQUALS = =
@@ -60,210 +60,275 @@ include CMakeFiles/traffic_violation.dir/flags.make
 CMakeFiles/traffic_violation.dir/src/main.cpp.o: CMakeFiles/traffic_violation.dir/flags.make
 CMakeFiles/traffic_violation.dir/src/main.cpp.o: ../src/main.cpp
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/drp-ai_tvm/data/traffic_violation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/traffic_violation.dir/src/main.cpp.o"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/main.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/main.cpp
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/main.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/main.cpp
 
 CMakeFiles/traffic_violation.dir/src/main.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/traffic_violation.dir/src/main.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/main.cpp > CMakeFiles/traffic_violation.dir/src/main.cpp.i
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/main.cpp > CMakeFiles/traffic_violation.dir/src/main.cpp.i
 
 CMakeFiles/traffic_violation.dir/src/main.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/traffic_violation.dir/src/main.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/main.cpp -o CMakeFiles/traffic_violation.dir/src/main.cpp.s
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/main.cpp -o CMakeFiles/traffic_violation.dir/src/main.cpp.s
 
 CMakeFiles/traffic_violation.dir/src/VideoInput.cpp.o: CMakeFiles/traffic_violation.dir/flags.make
 CMakeFiles/traffic_violation.dir/src/VideoInput.cpp.o: ../src/VideoInput.cpp
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/drp-ai_tvm/data/traffic_violation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/traffic_violation.dir/src/VideoInput.cpp.o"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/VideoInput.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/VideoInput.cpp
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/VideoInput.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/VideoInput.cpp
 
 CMakeFiles/traffic_violation.dir/src/VideoInput.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/traffic_violation.dir/src/VideoInput.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/VideoInput.cpp > CMakeFiles/traffic_violation.dir/src/VideoInput.cpp.i
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/VideoInput.cpp > CMakeFiles/traffic_violation.dir/src/VideoInput.cpp.i
 
 CMakeFiles/traffic_violation.dir/src/VideoInput.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/traffic_violation.dir/src/VideoInput.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/VideoInput.cpp -o CMakeFiles/traffic_violation.dir/src/VideoInput.cpp.s
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/VideoInput.cpp -o CMakeFiles/traffic_violation.dir/src/VideoInput.cpp.s
 
 CMakeFiles/traffic_violation.dir/src/common/config.cpp.o: CMakeFiles/traffic_violation.dir/flags.make
 CMakeFiles/traffic_violation.dir/src/common/config.cpp.o: ../src/common/config.cpp
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/drp-ai_tvm/data/traffic_violation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/traffic_violation.dir/src/common/config.cpp.o"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/common/config.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/common/config.cpp
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/common/config.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/common/config.cpp
 
 CMakeFiles/traffic_violation.dir/src/common/config.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/traffic_violation.dir/src/common/config.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/common/config.cpp > CMakeFiles/traffic_violation.dir/src/common/config.cpp.i
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/common/config.cpp > CMakeFiles/traffic_violation.dir/src/common/config.cpp.i
 
 CMakeFiles/traffic_violation.dir/src/common/config.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/traffic_violation.dir/src/common/config.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/common/config.cpp -o CMakeFiles/traffic_violation.dir/src/common/config.cpp.s
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/common/config.cpp -o CMakeFiles/traffic_violation.dir/src/common/config.cpp.s
 
 CMakeFiles/traffic_violation.dir/src/models/box.cpp.o: CMakeFiles/traffic_violation.dir/flags.make
 CMakeFiles/traffic_violation.dir/src/models/box.cpp.o: ../src/models/box.cpp
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/drp-ai_tvm/data/traffic_violation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/traffic_violation.dir/src/models/box.cpp.o"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/models/box.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/models/box.cpp
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/models/box.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/models/box.cpp
 
 CMakeFiles/traffic_violation.dir/src/models/box.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/traffic_violation.dir/src/models/box.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/models/box.cpp > CMakeFiles/traffic_violation.dir/src/models/box.cpp.i
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/models/box.cpp > CMakeFiles/traffic_violation.dir/src/models/box.cpp.i
 
 CMakeFiles/traffic_violation.dir/src/models/box.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/traffic_violation.dir/src/models/box.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/models/box.cpp -o CMakeFiles/traffic_violation.dir/src/models/box.cpp.s
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/models/box.cpp -o CMakeFiles/traffic_violation.dir/src/models/box.cpp.s
 
 CMakeFiles/traffic_violation.dir/src/models/TrafficDetector.cpp.o: CMakeFiles/traffic_violation.dir/flags.make
 CMakeFiles/traffic_violation.dir/src/models/TrafficDetector.cpp.o: ../src/models/TrafficDetector.cpp
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/drp-ai_tvm/data/traffic_violation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/traffic_violation.dir/src/models/TrafficDetector.cpp.o"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/models/TrafficDetector.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/models/TrafficDetector.cpp
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/models/TrafficDetector.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/models/TrafficDetector.cpp
 
 CMakeFiles/traffic_violation.dir/src/models/TrafficDetector.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/traffic_violation.dir/src/models/TrafficDetector.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/models/TrafficDetector.cpp > CMakeFiles/traffic_violation.dir/src/models/TrafficDetector.cpp.i
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/models/TrafficDetector.cpp > CMakeFiles/traffic_violation.dir/src/models/TrafficDetector.cpp.i
 
 CMakeFiles/traffic_violation.dir/src/models/TrafficDetector.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/traffic_violation.dir/src/models/TrafficDetector.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/models/TrafficDetector.cpp -o CMakeFiles/traffic_violation.dir/src/models/TrafficDetector.cpp.s
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/models/TrafficDetector.cpp -o CMakeFiles/traffic_violation.dir/src/models/TrafficDetector.cpp.s
 
 CMakeFiles/traffic_violation.dir/src/common/tess_module/TesseractEngine.cpp.o: CMakeFiles/traffic_violation.dir/flags.make
 CMakeFiles/traffic_violation.dir/src/common/tess_module/TesseractEngine.cpp.o: ../src/common/tess_module/TesseractEngine.cpp
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/drp-ai_tvm/data/traffic_violation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/traffic_violation.dir/src/common/tess_module/TesseractEngine.cpp.o"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/common/tess_module/TesseractEngine.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/common/tess_module/TesseractEngine.cpp
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/common/tess_module/TesseractEngine.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/common/tess_module/TesseractEngine.cpp
 
 CMakeFiles/traffic_violation.dir/src/common/tess_module/TesseractEngine.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/traffic_violation.dir/src/common/tess_module/TesseractEngine.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/common/tess_module/TesseractEngine.cpp > CMakeFiles/traffic_violation.dir/src/common/tess_module/TesseractEngine.cpp.i
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/common/tess_module/TesseractEngine.cpp > CMakeFiles/traffic_violation.dir/src/common/tess_module/TesseractEngine.cpp.i
 
 CMakeFiles/traffic_violation.dir/src/common/tess_module/TesseractEngine.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/traffic_violation.dir/src/common/tess_module/TesseractEngine.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/common/tess_module/TesseractEngine.cpp -o CMakeFiles/traffic_violation.dir/src/common/tess_module/TesseractEngine.cpp.s
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/common/tess_module/TesseractEngine.cpp -o CMakeFiles/traffic_violation.dir/src/common/tess_module/TesseractEngine.cpp.s
 
 CMakeFiles/traffic_violation.dir/src/common/lp_text_proc_module/LpTextProc.cpp.o: CMakeFiles/traffic_violation.dir/flags.make
 CMakeFiles/traffic_violation.dir/src/common/lp_text_proc_module/LpTextProc.cpp.o: ../src/common/lp_text_proc_module/LpTextProc.cpp
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/drp-ai_tvm/data/traffic_violation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/traffic_violation.dir/src/common/lp_text_proc_module/LpTextProc.cpp.o"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/common/lp_text_proc_module/LpTextProc.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/common/lp_text_proc_module/LpTextProc.cpp
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/common/lp_text_proc_module/LpTextProc.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/common/lp_text_proc_module/LpTextProc.cpp
 
 CMakeFiles/traffic_violation.dir/src/common/lp_text_proc_module/LpTextProc.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/traffic_violation.dir/src/common/lp_text_proc_module/LpTextProc.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/common/lp_text_proc_module/LpTextProc.cpp > CMakeFiles/traffic_violation.dir/src/common/lp_text_proc_module/LpTextProc.cpp.i
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/common/lp_text_proc_module/LpTextProc.cpp > CMakeFiles/traffic_violation.dir/src/common/lp_text_proc_module/LpTextProc.cpp.i
 
 CMakeFiles/traffic_violation.dir/src/common/lp_text_proc_module/LpTextProc.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/traffic_violation.dir/src/common/lp_text_proc_module/LpTextProc.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/common/lp_text_proc_module/LpTextProc.cpp -o CMakeFiles/traffic_violation.dir/src/common/lp_text_proc_module/LpTextProc.cpp.s
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/common/lp_text_proc_module/LpTextProc.cpp -o CMakeFiles/traffic_violation.dir/src/common/lp_text_proc_module/LpTextProc.cpp.s
 
 CMakeFiles/traffic_violation.dir/src/common/lp_regex_module/lp_regex_function.cpp.o: CMakeFiles/traffic_violation.dir/flags.make
 CMakeFiles/traffic_violation.dir/src/common/lp_regex_module/lp_regex_function.cpp.o: ../src/common/lp_regex_module/lp_regex_function.cpp
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/drp-ai_tvm/data/traffic_violation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/traffic_violation.dir/src/common/lp_regex_module/lp_regex_function.cpp.o"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/common/lp_regex_module/lp_regex_function.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/common/lp_regex_module/lp_regex_function.cpp
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/common/lp_regex_module/lp_regex_function.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/common/lp_regex_module/lp_regex_function.cpp
 
 CMakeFiles/traffic_violation.dir/src/common/lp_regex_module/lp_regex_function.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/traffic_violation.dir/src/common/lp_regex_module/lp_regex_function.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/common/lp_regex_module/lp_regex_function.cpp > CMakeFiles/traffic_violation.dir/src/common/lp_regex_module/lp_regex_function.cpp.i
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/common/lp_regex_module/lp_regex_function.cpp > CMakeFiles/traffic_violation.dir/src/common/lp_regex_module/lp_regex_function.cpp.i
 
 CMakeFiles/traffic_violation.dir/src/common/lp_regex_module/lp_regex_function.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/traffic_violation.dir/src/common/lp_regex_module/lp_regex_function.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/common/lp_regex_module/lp_regex_function.cpp -o CMakeFiles/traffic_violation.dir/src/common/lp_regex_module/lp_regex_function.cpp.s
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/common/lp_regex_module/lp_regex_function.cpp -o CMakeFiles/traffic_violation.dir/src/common/lp_regex_module/lp_regex_function.cpp.s
 
 CMakeFiles/traffic_violation.dir/src/common/lp_validate_module/LpValidate.cpp.o: CMakeFiles/traffic_violation.dir/flags.make
 CMakeFiles/traffic_violation.dir/src/common/lp_validate_module/LpValidate.cpp.o: ../src/common/lp_validate_module/LpValidate.cpp
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/drp-ai_tvm/data/traffic_violation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/traffic_violation.dir/src/common/lp_validate_module/LpValidate.cpp.o"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/common/lp_validate_module/LpValidate.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/common/lp_validate_module/LpValidate.cpp
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/common/lp_validate_module/LpValidate.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/common/lp_validate_module/LpValidate.cpp
 
 CMakeFiles/traffic_violation.dir/src/common/lp_validate_module/LpValidate.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/traffic_violation.dir/src/common/lp_validate_module/LpValidate.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/common/lp_validate_module/LpValidate.cpp > CMakeFiles/traffic_violation.dir/src/common/lp_validate_module/LpValidate.cpp.i
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/common/lp_validate_module/LpValidate.cpp > CMakeFiles/traffic_violation.dir/src/common/lp_validate_module/LpValidate.cpp.i
 
 CMakeFiles/traffic_violation.dir/src/common/lp_validate_module/LpValidate.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/traffic_violation.dir/src/common/lp_validate_module/LpValidate.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/common/lp_validate_module/LpValidate.cpp -o CMakeFiles/traffic_violation.dir/src/common/lp_validate_module/LpValidate.cpp.s
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/common/lp_validate_module/LpValidate.cpp -o CMakeFiles/traffic_violation.dir/src/common/lp_validate_module/LpValidate.cpp.s
 
 CMakeFiles/traffic_violation.dir/src/tracking/VehicleTracker.cpp.o: CMakeFiles/traffic_violation.dir/flags.make
 CMakeFiles/traffic_violation.dir/src/tracking/VehicleTracker.cpp.o: ../src/tracking/VehicleTracker.cpp
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/drp-ai_tvm/data/traffic_violation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/traffic_violation.dir/src/tracking/VehicleTracker.cpp.o"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/tracking/VehicleTracker.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/tracking/VehicleTracker.cpp
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/tracking/VehicleTracker.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/tracking/VehicleTracker.cpp
 
 CMakeFiles/traffic_violation.dir/src/tracking/VehicleTracker.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/traffic_violation.dir/src/tracking/VehicleTracker.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/tracking/VehicleTracker.cpp > CMakeFiles/traffic_violation.dir/src/tracking/VehicleTracker.cpp.i
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/tracking/VehicleTracker.cpp > CMakeFiles/traffic_violation.dir/src/tracking/VehicleTracker.cpp.i
 
 CMakeFiles/traffic_violation.dir/src/tracking/VehicleTracker.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/traffic_violation.dir/src/tracking/VehicleTracker.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/tracking/VehicleTracker.cpp -o CMakeFiles/traffic_violation.dir/src/tracking/VehicleTracker.cpp.s
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/tracking/VehicleTracker.cpp -o CMakeFiles/traffic_violation.dir/src/tracking/VehicleTracker.cpp.s
 
 CMakeFiles/traffic_violation.dir/src/violation/ViolationEngine.cpp.o: CMakeFiles/traffic_violation.dir/flags.make
 CMakeFiles/traffic_violation.dir/src/violation/ViolationEngine.cpp.o: ../src/violation/ViolationEngine.cpp
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/drp-ai_tvm/data/traffic_violation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/traffic_violation.dir/src/violation/ViolationEngine.cpp.o"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/violation/ViolationEngine.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/violation/ViolationEngine.cpp
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/violation/ViolationEngine.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/violation/ViolationEngine.cpp
 
 CMakeFiles/traffic_violation.dir/src/violation/ViolationEngine.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/traffic_violation.dir/src/violation/ViolationEngine.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/violation/ViolationEngine.cpp > CMakeFiles/traffic_violation.dir/src/violation/ViolationEngine.cpp.i
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/violation/ViolationEngine.cpp > CMakeFiles/traffic_violation.dir/src/violation/ViolationEngine.cpp.i
 
 CMakeFiles/traffic_violation.dir/src/violation/ViolationEngine.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/traffic_violation.dir/src/violation/ViolationEngine.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/violation/ViolationEngine.cpp -o CMakeFiles/traffic_violation.dir/src/violation/ViolationEngine.cpp.s
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/violation/ViolationEngine.cpp -o CMakeFiles/traffic_violation.dir/src/violation/ViolationEngine.cpp.s
 
 CMakeFiles/traffic_violation.dir/src/violation/HelmetRule.cpp.o: CMakeFiles/traffic_violation.dir/flags.make
 CMakeFiles/traffic_violation.dir/src/violation/HelmetRule.cpp.o: ../src/violation/HelmetRule.cpp
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/drp-ai_tvm/data/traffic_violation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building CXX object CMakeFiles/traffic_violation.dir/src/violation/HelmetRule.cpp.o"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/violation/HelmetRule.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/violation/HelmetRule.cpp
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/violation/HelmetRule.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/violation/HelmetRule.cpp
 
 CMakeFiles/traffic_violation.dir/src/violation/HelmetRule.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/traffic_violation.dir/src/violation/HelmetRule.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/violation/HelmetRule.cpp > CMakeFiles/traffic_violation.dir/src/violation/HelmetRule.cpp.i
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/violation/HelmetRule.cpp > CMakeFiles/traffic_violation.dir/src/violation/HelmetRule.cpp.i
 
 CMakeFiles/traffic_violation.dir/src/violation/HelmetRule.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/traffic_violation.dir/src/violation/HelmetRule.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/violation/HelmetRule.cpp -o CMakeFiles/traffic_violation.dir/src/violation/HelmetRule.cpp.s
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/violation/HelmetRule.cpp -o CMakeFiles/traffic_violation.dir/src/violation/HelmetRule.cpp.s
 
 CMakeFiles/traffic_violation.dir/src/violation/RedLightRule.cpp.o: CMakeFiles/traffic_violation.dir/flags.make
 CMakeFiles/traffic_violation.dir/src/violation/RedLightRule.cpp.o: ../src/violation/RedLightRule.cpp
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/drp-ai_tvm/data/traffic_violation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building CXX object CMakeFiles/traffic_violation.dir/src/violation/RedLightRule.cpp.o"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/violation/RedLightRule.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/violation/RedLightRule.cpp
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/violation/RedLightRule.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/violation/RedLightRule.cpp
 
 CMakeFiles/traffic_violation.dir/src/violation/RedLightRule.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/traffic_violation.dir/src/violation/RedLightRule.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/violation/RedLightRule.cpp > CMakeFiles/traffic_violation.dir/src/violation/RedLightRule.cpp.i
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/violation/RedLightRule.cpp > CMakeFiles/traffic_violation.dir/src/violation/RedLightRule.cpp.i
 
 CMakeFiles/traffic_violation.dir/src/violation/RedLightRule.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/traffic_violation.dir/src/violation/RedLightRule.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/violation/RedLightRule.cpp -o CMakeFiles/traffic_violation.dir/src/violation/RedLightRule.cpp.s
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/violation/RedLightRule.cpp -o CMakeFiles/traffic_violation.dir/src/violation/RedLightRule.cpp.s
 
 CMakeFiles/traffic_violation.dir/src/violation/WrongLaneRule.cpp.o: CMakeFiles/traffic_violation.dir/flags.make
 CMakeFiles/traffic_violation.dir/src/violation/WrongLaneRule.cpp.o: ../src/violation/WrongLaneRule.cpp
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/drp-ai_tvm/data/traffic_violation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Building CXX object CMakeFiles/traffic_violation.dir/src/violation/WrongLaneRule.cpp.o"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/violation/WrongLaneRule.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/violation/WrongLaneRule.cpp
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/violation/WrongLaneRule.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/violation/WrongLaneRule.cpp
 
 CMakeFiles/traffic_violation.dir/src/violation/WrongLaneRule.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/traffic_violation.dir/src/violation/WrongLaneRule.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/violation/WrongLaneRule.cpp > CMakeFiles/traffic_violation.dir/src/violation/WrongLaneRule.cpp.i
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/violation/WrongLaneRule.cpp > CMakeFiles/traffic_violation.dir/src/violation/WrongLaneRule.cpp.i
 
 CMakeFiles/traffic_violation.dir/src/violation/WrongLaneRule.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/traffic_violation.dir/src/violation/WrongLaneRule.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/violation/WrongLaneRule.cpp -o CMakeFiles/traffic_violation.dir/src/violation/WrongLaneRule.cpp.s
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/violation/WrongLaneRule.cpp -o CMakeFiles/traffic_violation.dir/src/violation/WrongLaneRule.cpp.s
 
 CMakeFiles/traffic_violation.dir/src/violation/LaneLineRule.cpp.o: CMakeFiles/traffic_violation.dir/flags.make
 CMakeFiles/traffic_violation.dir/src/violation/LaneLineRule.cpp.o: ../src/violation/LaneLineRule.cpp
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/drp-ai_tvm/data/traffic_violation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_15) "Building CXX object CMakeFiles/traffic_violation.dir/src/violation/LaneLineRule.cpp.o"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/violation/LaneLineRule.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/violation/LaneLineRule.cpp
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/violation/LaneLineRule.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/violation/LaneLineRule.cpp
 
 CMakeFiles/traffic_violation.dir/src/violation/LaneLineRule.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/traffic_violation.dir/src/violation/LaneLineRule.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/violation/LaneLineRule.cpp > CMakeFiles/traffic_violation.dir/src/violation/LaneLineRule.cpp.i
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/violation/LaneLineRule.cpp > CMakeFiles/traffic_violation.dir/src/violation/LaneLineRule.cpp.i
 
 CMakeFiles/traffic_violation.dir/src/violation/LaneLineRule.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/traffic_violation.dir/src/violation/LaneLineRule.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/violation/LaneLineRule.cpp -o CMakeFiles/traffic_violation.dir/src/violation/LaneLineRule.cpp.s
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/violation/LaneLineRule.cpp -o CMakeFiles/traffic_violation.dir/src/violation/LaneLineRule.cpp.s
 
 CMakeFiles/traffic_violation.dir/src/output/ViolationLogger.cpp.o: CMakeFiles/traffic_violation.dir/flags.make
 CMakeFiles/traffic_violation.dir/src/output/ViolationLogger.cpp.o: ../src/output/ViolationLogger.cpp
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/drp-ai_tvm/data/traffic_violation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_16) "Building CXX object CMakeFiles/traffic_violation.dir/src/output/ViolationLogger.cpp.o"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/output/ViolationLogger.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/output/ViolationLogger.cpp
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/output/ViolationLogger.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/output/ViolationLogger.cpp
 
 CMakeFiles/traffic_violation.dir/src/output/ViolationLogger.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/traffic_violation.dir/src/output/ViolationLogger.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/output/ViolationLogger.cpp > CMakeFiles/traffic_violation.dir/src/output/ViolationLogger.cpp.i
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/output/ViolationLogger.cpp > CMakeFiles/traffic_violation.dir/src/output/ViolationLogger.cpp.i
 
 CMakeFiles/traffic_violation.dir/src/output/ViolationLogger.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/traffic_violation.dir/src/output/ViolationLogger.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/output/ViolationLogger.cpp -o CMakeFiles/traffic_violation.dir/src/output/ViolationLogger.cpp.s
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/output/ViolationLogger.cpp -o CMakeFiles/traffic_violation.dir/src/output/ViolationLogger.cpp.s
+
+CMakeFiles/traffic_violation.dir/src/drp/MeraDrpRuntimeWrapper.cpp.o: CMakeFiles/traffic_violation.dir/flags.make
+CMakeFiles/traffic_violation.dir/src/drp/MeraDrpRuntimeWrapper.cpp.o: ../src/drp/MeraDrpRuntimeWrapper.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/drp-ai_tvm/data/traffic_violation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_17) "Building CXX object CMakeFiles/traffic_violation.dir/src/drp/MeraDrpRuntimeWrapper.cpp.o"
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/drp/MeraDrpRuntimeWrapper.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/drp/MeraDrpRuntimeWrapper.cpp
+
+CMakeFiles/traffic_violation.dir/src/drp/MeraDrpRuntimeWrapper.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/traffic_violation.dir/src/drp/MeraDrpRuntimeWrapper.cpp.i"
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/drp/MeraDrpRuntimeWrapper.cpp > CMakeFiles/traffic_violation.dir/src/drp/MeraDrpRuntimeWrapper.cpp.i
+
+CMakeFiles/traffic_violation.dir/src/drp/MeraDrpRuntimeWrapper.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/traffic_violation.dir/src/drp/MeraDrpRuntimeWrapper.cpp.s"
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/drp/MeraDrpRuntimeWrapper.cpp -o CMakeFiles/traffic_violation.dir/src/drp/MeraDrpRuntimeWrapper.cpp.s
+
+CMakeFiles/traffic_violation.dir/src/drp/PreRuntime.cpp.o: CMakeFiles/traffic_violation.dir/flags.make
+CMakeFiles/traffic_violation.dir/src/drp/PreRuntime.cpp.o: ../src/drp/PreRuntime.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/drp-ai_tvm/data/traffic_violation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_18) "Building CXX object CMakeFiles/traffic_violation.dir/src/drp/PreRuntime.cpp.o"
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/drp/PreRuntime.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/drp/PreRuntime.cpp
+
+CMakeFiles/traffic_violation.dir/src/drp/PreRuntime.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/traffic_violation.dir/src/drp/PreRuntime.cpp.i"
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/drp/PreRuntime.cpp > CMakeFiles/traffic_violation.dir/src/drp/PreRuntime.cpp.i
+
+CMakeFiles/traffic_violation.dir/src/drp/PreRuntime.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/traffic_violation.dir/src/drp/PreRuntime.cpp.s"
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/drp/PreRuntime.cpp -o CMakeFiles/traffic_violation.dir/src/drp/PreRuntime.cpp.s
+
+CMakeFiles/traffic_violation.dir/src/drp/wayland.cpp.o: CMakeFiles/traffic_violation.dir/flags.make
+CMakeFiles/traffic_violation.dir/src/drp/wayland.cpp.o: ../src/drp/wayland.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/drp-ai_tvm/data/traffic_violation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_19) "Building CXX object CMakeFiles/traffic_violation.dir/src/drp/wayland.cpp.o"
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/drp/wayland.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/drp/wayland.cpp
+
+CMakeFiles/traffic_violation.dir/src/drp/wayland.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/traffic_violation.dir/src/drp/wayland.cpp.i"
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/drp/wayland.cpp > CMakeFiles/traffic_violation.dir/src/drp/wayland.cpp.i
+
+CMakeFiles/traffic_violation.dir/src/drp/wayland.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/traffic_violation.dir/src/drp/wayland.cpp.s"
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/drp/wayland.cpp -o CMakeFiles/traffic_violation.dir/src/drp/wayland.cpp.s
+
+CMakeFiles/traffic_violation.dir/src/drp/dmabuf.cpp.o: CMakeFiles/traffic_violation.dir/flags.make
+CMakeFiles/traffic_violation.dir/src/drp/dmabuf.cpp.o: ../src/drp/dmabuf.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/drp-ai_tvm/data/traffic_violation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_20) "Building CXX object CMakeFiles/traffic_violation.dir/src/drp/dmabuf.cpp.o"
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/drp/dmabuf.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/drp/dmabuf.cpp
+
+CMakeFiles/traffic_violation.dir/src/drp/dmabuf.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/traffic_violation.dir/src/drp/dmabuf.cpp.i"
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/drp/dmabuf.cpp > CMakeFiles/traffic_violation.dir/src/drp/dmabuf.cpp.i
+
+CMakeFiles/traffic_violation.dir/src/drp/dmabuf.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/traffic_violation.dir/src/drp/dmabuf.cpp.s"
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/drp/dmabuf.cpp -o CMakeFiles/traffic_violation.dir/src/drp/dmabuf.cpp.s
+
+CMakeFiles/traffic_violation.dir/src/drp/image.cpp.o: CMakeFiles/traffic_violation.dir/flags.make
+CMakeFiles/traffic_violation.dir/src/drp/image.cpp.o: ../src/drp/image.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/drp-ai_tvm/data/traffic_violation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_21) "Building CXX object CMakeFiles/traffic_violation.dir/src/drp/image.cpp.o"
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/traffic_violation.dir/src/drp/image.cpp.o -c /drp-ai_tvm/data/traffic_violation/src/drp/image.cpp
+
+CMakeFiles/traffic_violation.dir/src/drp/image.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/traffic_violation.dir/src/drp/image.cpp.i"
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /drp-ai_tvm/data/traffic_violation/src/drp/image.cpp > CMakeFiles/traffic_violation.dir/src/drp/image.cpp.i
+
+CMakeFiles/traffic_violation.dir/src/drp/image.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/traffic_violation.dir/src/drp/image.cpp.s"
+	/opt/poky/3.1.31/sysroots/x86_64-pokysdk-linux/usr/bin/aarch64-poky-linux/aarch64-poky-linux-g++ --sysroot=/opt/poky/3.1.31/sysroots/aarch64-poky-linux $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /drp-ai_tvm/data/traffic_violation/src/drp/image.cpp -o CMakeFiles/traffic_violation.dir/src/drp/image.cpp.s
 
 # Object files for target traffic_violation
 traffic_violation_OBJECTS = \
@@ -282,7 +347,12 @@ traffic_violation_OBJECTS = \
 "CMakeFiles/traffic_violation.dir/src/violation/RedLightRule.cpp.o" \
 "CMakeFiles/traffic_violation.dir/src/violation/WrongLaneRule.cpp.o" \
 "CMakeFiles/traffic_violation.dir/src/violation/LaneLineRule.cpp.o" \
-"CMakeFiles/traffic_violation.dir/src/output/ViolationLogger.cpp.o"
+"CMakeFiles/traffic_violation.dir/src/output/ViolationLogger.cpp.o" \
+"CMakeFiles/traffic_violation.dir/src/drp/MeraDrpRuntimeWrapper.cpp.o" \
+"CMakeFiles/traffic_violation.dir/src/drp/PreRuntime.cpp.o" \
+"CMakeFiles/traffic_violation.dir/src/drp/wayland.cpp.o" \
+"CMakeFiles/traffic_violation.dir/src/drp/dmabuf.cpp.o" \
+"CMakeFiles/traffic_violation.dir/src/drp/image.cpp.o"
 
 # External object files for target traffic_violation
 traffic_violation_EXTERNAL_OBJECTS =
@@ -303,57 +373,59 @@ traffic_violation: CMakeFiles/traffic_violation.dir/src/violation/RedLightRule.c
 traffic_violation: CMakeFiles/traffic_violation.dir/src/violation/WrongLaneRule.cpp.o
 traffic_violation: CMakeFiles/traffic_violation.dir/src/violation/LaneLineRule.cpp.o
 traffic_violation: CMakeFiles/traffic_violation.dir/src/output/ViolationLogger.cpp.o
+traffic_violation: CMakeFiles/traffic_violation.dir/src/drp/MeraDrpRuntimeWrapper.cpp.o
+traffic_violation: CMakeFiles/traffic_violation.dir/src/drp/PreRuntime.cpp.o
+traffic_violation: CMakeFiles/traffic_violation.dir/src/drp/wayland.cpp.o
+traffic_violation: CMakeFiles/traffic_violation.dir/src/drp/dmabuf.cpp.o
+traffic_violation: CMakeFiles/traffic_violation.dir/src/drp/image.cpp.o
 traffic_violation: CMakeFiles/traffic_violation.dir/build.make
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_stitching.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_aruco.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_bgsegm.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_bioinspired.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_ccalib.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_dnn_objdetect.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_dnn_superres.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_dpm.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_face.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_freetype.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_fuzzy.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_hdf.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_hfs.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_img_hash.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_line_descriptor.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_quality.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_reg.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_rgbd.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_saliency.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_shape.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_stereo.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_structured_light.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_superres.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_surface_matching.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_tracking.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_videostab.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_viz.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_xobjdetect.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_xphoto.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_highgui.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_datasets.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_plot.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_text.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_dnn.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_ml.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_phase_unwrapping.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_optflow.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_ximgproc.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_video.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_videoio.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_imgcodecs.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_objdetect.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_calib3d.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_features2d.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_flann.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_photo.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_imgproc.so.4.2.0
-traffic_violation: /usr/lib/x86_64-linux-gnu/libopencv_core.so.4.2.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_gapi.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_stitching.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_aruco.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_bgsegm.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_bioinspired.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_ccalib.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_dpm.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_face.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_fuzzy.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_hfs.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_img_hash.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_line_descriptor.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_quality.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_reg.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_rgbd.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_saliency.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_sfm.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_stereo.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_structured_light.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_superres.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_surface_matching.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_tracking.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_videostab.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_xfeatures2d.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_xobjdetect.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_xphoto.so.4.1.0
+traffic_violation: /drp-ai_tvm/tvm/build_runtime/libtvm_runtime.so
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_shape.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_datasets.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_ml.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_plot.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_phase_unwrapping.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_optflow.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_ximgproc.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_video.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_objdetect.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_calib3d.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_features2d.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_flann.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_highgui.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_videoio.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_imgcodecs.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_photo.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_imgproc.so.4.1.0
+traffic_violation: /opt/poky/3.1.31/sysroots/aarch64-poky-linux/usr/lib64/libopencv_core.so.4.1.0
 traffic_violation: CMakeFiles/traffic_violation.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/drp-ai_tvm/data/traffic_violation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_17) "Linking CXX executable traffic_violation"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/drp-ai_tvm/data/traffic_violation/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_22) "Linking CXX executable traffic_violation"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/traffic_violation.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
