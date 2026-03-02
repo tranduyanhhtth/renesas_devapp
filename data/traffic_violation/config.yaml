@@ -1,0 +1,101 @@
+##############################################################################
+# traffic_violation/config.yaml
+# Tất cả tham số cấu hình – không cần recompile khi thay đổi
+##############################################################################
+
+# ── Video input ──────────────────────────────────────────────────────────────
+video:
+  source: "sample_intersection.mp4"   # đường dẫn file video hoặc index camera USB
+  width:  1920
+  height: 1080
+  fps:    30
+  # GStreamer pipeline tùy chỉnh (để trống thì auto-build từ source/width/height)
+  gstreamer_pipeline: ""
+
+# ── Unified detector (single YOLOv3 model trained for all classes) ───────────
+detector:
+  model_dir:   "models/traffic_yolov3"
+  pre_dir:     "models/traffic_yolov3/preprocess"
+  label_file:  "models/traffic_yolov3/labels.txt"
+  input_width:  416
+  input_height: 416
+  drpai_freq:   2
+  conf_threshold: 0.50
+  nms_threshold:  0.45
+  # YOLO architecture
+  num_class:   7
+  num_bb:      3
+  num_layers:  3
+  grids:       [13, 26, 52]
+  anchors:     [10,13, 16,30, 33,23, 30,61, 62,45, 59,119, 116,90, 156,198, 373,326]
+  # Class IDs (customize after training)
+  class_motorbike:     0
+  class_car:           1
+  class_truck:         2
+  class_bus:           3
+  class_person:        4
+  class_helmet:        5
+  class_license_plate: 6
+
+# ── LP OCR ────────────────────────────────────────────────────────────────────
+enable_lp_ocr: true
+
+# ── DRP-AI hardware ───────────────────────────────────────────────────────────
+drpai:
+  freq_index:  2        # 0=lowest … 3=highest frequency
+  mem_offset:  0
+
+# ── Camera / scene ROI (normalized [0..1] hoặc pixel tuyệt đối) ─────────────
+# Đơn vị: tỉ lệ so với frame (0.0 – 1.0)
+scene:
+  # Stop-line: xe nào vượt qua line này khi đèn đỏ = vi phạm
+  stop_line:
+    y1: 0.60     # phía trên stop-line (normalized y)
+    y2: 0.63     # phía dưới stop-line
+
+  # Làn đường cho từng loại xe (normalized x band)
+  lane_zones:
+    motorbike: { x_min: 0.00, x_max: 0.50 }
+    car:       { x_min: 0.25, x_max: 0.75 }
+    truck:     { x_min: 0.25, x_max: 1.00 }
+
+  # Vạch phân làn tĩnh – dùng cho rule "đè vạch" (LaneLineRule)
+  # x_norm: vị trí vạch theo chiều ngang frame (0.0=trái, 1.0=phải)
+  # overlap_px: số pixel tối thiểu xe phải đè qua vạch mỗi bên mới tính vi phạm
+  lane_lines:
+    - { x_norm: 0.33, overlap_px: 10 }   # vạch 1/3 trái
+    - { x_norm: 0.66, overlap_px: 10 }   # vạch 2/3 phải
+
+  # Vùng đèn giao thông (để detect màu đèn bằng HSV)
+  traffic_light_roi:
+    x: 0.80
+    y: 0.05
+    w: 0.08
+    h: 0.20
+
+# ── Violation engine ─────────────────────────────────────────────────────────
+violation:
+  # Bật / tắt từng rule
+  rules:
+    helmet:     true
+    red_light:  true
+    wrong_lane: true
+    lane_line:  true   # đè vạch kẻ đường
+
+  # Khoảng thời gian tối thiểu giữa 2 lần log cùng 1 xe (giây)
+  cooldown_sec: 5.0
+
+  # Số frame liên tiếp phải vi phạm mới ghi nhận (tránh false positive)
+  confirm_frames: 3
+
+# ── Output ───────────────────────────────────────────────────────────────────
+output:
+  save_dir: "./violations"
+  # Format tên file: {plate}_{datetime}_{violation}.jpg
+  filename_pattern: "{plate}_{datetime}_{violation}"
+  # Save cả frame đầy đủ (true) hay chỉ crop bbox xe (false)
+  save_full_frame: true
+  # Ghi metadata JSON song song
+  save_json: true
+  # Ghi video annotated output (để trống = không ghi)
+  annotated_video: ""
