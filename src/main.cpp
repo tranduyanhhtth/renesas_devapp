@@ -592,7 +592,27 @@ int main(int argc, char* argv[])
            g_cfg.video_width, g_cfg.video_height, g_cfg.video_fps);
 
     /* ── 2. DRP-AI base address ──────────────────────────────────────────── */
+    /* Declared here (before any goto) to avoid "crosses initialization" error */
     uint64_t drpai_base = 0;
+
+    /* DRP-AI memory layout (R01_object_detection V2L pattern):
+     *   [drpai_base + 0             ]  PreRuntime data (auto-loaded by PreRuntime::Load)
+     *   [drpai_base + DRPAI_MEM_OFFSET]  TVM main model (deploy.json/.so/.params)
+     * Without the offset both regions overlap → PreRuntime DRPAI_START hangs. */
+#   define DRPAI_MEM_OFFSET  (0x38E0000UL)
+
+    /* Guard: if config failed to load, model_dir will be empty which causes
+     * TVM to attempt loading "/deploy.so" and crash.  Exit cleanly instead. */
+    if (g_cfg.detector.model_dir.empty()) {
+        fprintf(stderr, "[Main][ERROR] model_dir is empty - config did not load.\n");
+        fprintf(stderr, "             Verify '%s' is a valid ASCII-only YAML file.\n",
+                config_path.c_str());
+        fprintf(stderr, "             OpenCV 4.1.0 FileStorage rejects UTF-8 characters\n"
+                        "             in YAML files (comments included).\n");
+        ret_main = -1;
+        goto end_main;
+    }
+
 #ifdef WITH_DRP
     {
         int fd = open("/dev/drpai0", O_RDWR);
@@ -605,7 +625,8 @@ int main(int argc, char* argv[])
         if (ioctl(fd, DRPAI_GET_DRPAI_AREA, &addr) == 0)
             drpai_base = static_cast<uint64_t>(addr);
         ::close(fd);
-        printf("[Main] DRP-AI base: 0x%lx\n", (unsigned long)drpai_base);
+        printf("[Main] DRP-AI base: 0x%lx  model offset: 0x%lx\n",
+               (unsigned long)drpai_base, (unsigned long)DRPAI_MEM_OFFSET);
     }
 #endif
 
@@ -641,7 +662,9 @@ int main(int argc, char* argv[])
     }
 
     /* ── 4. Load DRP-AI model ────────────────────────────────────────────── */
-    if (!g_detector->load(drpai_base)) {
+    /* Pass (base + DRPAI_MEM_OFFSET) so TVM model memory does not overlap
+     * with PreRuntime's memory region (same as R01 V2L: drpaimem_addr_start+offset). */
+    if (!g_detector->load(drpai_base + DRPAI_MEM_OFFSET)) {
         fprintf(stderr, "[Main][ERROR] TrafficDetector::load() failed\n");
         ret_main = -1;
         goto end_cleanup;

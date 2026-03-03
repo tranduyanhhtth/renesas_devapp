@@ -1,37 +1,32 @@
 ##############################################################################
 # exe_v2l/config.yaml  - Deployment config for RZ/V2L board
+# NOTE: ASCII-only - OpenCV 4.1.0 FileStorage cannot parse UTF-8 in YAML files.
 ##############################################################################
 
 # -- Video input --------------------------------------------------------------
-# source_type: cách switch nguồn video (chỉ cần sửa 2 dòng source_type + source):
-#
-#   "file"   - video file MP4/AVI để test offline
+# source_type options (edit the two lines below to switch):
+#   "file"   - MP4/AVI video file for offline testing
 #              source: "/home/root/traffic_violation/input.mp4"
-#
-#   "mipi"   - MIPI CSI-2 camera (OV5645) trực tiếp trên RZ/V2L
-#              source: "/dev/video0"   (CRU output sau media-ctl)
-#              → tự động chạy 4 lệnh media-ctl trước khi capture
-#
+#   "usb"    - USB camera via v4l2src
+#              source: "/dev/video0"
+#   "mipi"   - MIPI CSI-2 camera (OV5645) on RZ/V2L
+#              source: "/dev/video0"  (runs 4 media-ctl init commands automatically)
+#   "rtsp"   - IP camera over network
+#              source: "rtsp://192.168.1.100:554/stream"
+#   "custom" - use gstreamer_pipeline string directly
 video:
-  # --- file: test với video offline ---
-  # source_type: "file"
-  # source: "/home/root/traffic_violation/input.mp4"
-
-  # --- mipi: camera MIPI CSI-2 trên RZ/V2L board ---
   source_type: "mipi"
   source: "/dev/video0"
-
-  # ===================================================
   width:  640
   height: 480
   fps:    20
-  gstreamer_pipeline: ""  
+  gstreamer_pipeline: ""
 
 # -- Detector -----------------------------------------------------------------
 # model_type: "yolov8"  -> anchor-free,  output [num_class+4, total_anchors]
 # model_type: "yolov3"  -> anchor-based, requires grids + anchors
 #
-# OPTION A: YOLOv8n COCO 80 classes (model compile san co tai tutorials/yolov8n_onnx/)
+# OPTION A: YOLOv8n COCO 80 classes
 detector:
   model_type:   "yolov8"
   model_dir:    "models/yolov8n_onnx"
@@ -46,16 +41,16 @@ detector:
   num_bb:      1
   num_layers:  3
   grids:       [80, 40, 20]
-  # COCO class IDs (coco-labels-2014_2017.txt order):
+  # COCO class IDs:
   class_motorbike:     3
   class_car:           2
   class_truck:         7
   class_bus:           5
   class_person:        0
-  class_helmet:        -1   # khong co trong COCO -> HelmetRule skip
-  class_license_plate: -1   # khong co trong COCO -> LP OCR skip
+  class_helmet:        -1   # not in COCO -> HelmetRule disabled
+  class_license_plate: -1   # not in COCO -> LP OCR disabled
 
-# OPTION B: Custom YOLOv3 7 classes (can tu train + compile)
+# OPTION B: Custom YOLOv3 7 classes (train + compile with DRP-AI TVM)
 # detector:
 #   model_type:  "yolov3"
 #   model_dir:   "models/traffic_yolov3"
@@ -79,7 +74,7 @@ detector:
 #   class_helmet:        5
 #   class_license_plate: 6
 
-enable_lp_ocr: false   # COCO khong co LP -> tat
+enable_lp_ocr: false   # COCO has no LP class -> disabled
 
 drpai:
   freq_index:  2
@@ -106,7 +101,7 @@ scene:
 # -- Violation engine ---------------------------------------------------------
 violation:
   rules:
-    helmet:     false   # tat vi class_helmet=-1
+    helmet:     false   # disabled: class_helmet=-1 (not in COCO)
     red_light:  true
     wrong_lane: true
     lane_line:  true
