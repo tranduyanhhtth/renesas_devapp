@@ -21,6 +21,17 @@ static inline float fp16_to_fp32(uint16_t a) {
 #endif
 
 /* ─────────────────────────────────────────────────────────────────────────── */
+TrafficDetector::~TrafficDetector()
+{
+#ifdef WITH_DRP
+    if (m_drpai_buf) {
+        buffer_free_dmabuf(m_drpai_buf);
+        free(m_drpai_buf);
+        m_drpai_buf = nullptr;
+    }
+#endif
+}
+
 TrafficDetector::TrafficDetector(const DetectorConfig& cfg)
     : m_cfg(cfg)
 {
@@ -69,6 +80,24 @@ bool TrafficDetector::load(uint64_t drpai_base_addr)
         } else {
             m_pre_ok = true;
             std::cout << "[TrafficDetector] PreRuntime loaded: " << m_cfg.pre_dir << "\n";
+
+            /* Allocate MMNGR DMA buffer for PreRuntime physical address.
+             * Size = model input (W x H x 3 BGR), same as R01's drpai_buf.
+             * PreRuntime receives phy_addr and handles resize+normalise itself. */
+            m_drpai_buf = (dma_buffer*)malloc(sizeof(dma_buffer));
+            int r2 = buffer_alloc_dmabuf(m_drpai_buf,
+                         m_cfg.input_width * m_cfg.input_height * 3);
+            if (r2 != 0) {
+                std::cerr << "[TrafficDetector] DMA buffer alloc failed (ret=" << r2 << ")\n";
+                free(m_drpai_buf);
+                m_drpai_buf = nullptr;
+                m_pre_ok = false;  /* fall back to CPU */
+            } else {
+                std::cout << "[TrafficDetector] DMA buf " << m_cfg.input_width
+                          << "x" << m_cfg.input_height << "x3"
+                          << " phy=0x" << std::hex << m_drpai_buf->phy_addr
+                          << std::dec << "\n";
+            }
         }
     }
 
@@ -276,11 +305,30 @@ std::vector<detection> TrafficDetector::detect(const cv::Mat& frame)
     auto t0 = std::chrono::steady_clock::now();
 
     /* ── Preprocessing ──────────────────────────────────────────────────────── */
-    if (m_pre_ok)
+    if (m_pre_ok && m_drpai_buf)
     {
-        /* DRP PreRuntime: resize+normalize trên hardware */
+        /* DRP PreRuntime with proper MMNGR DMA buffer (like R01_object_detection).
+         * Steps (R01 pattern):
+         *   1. Copy RAW camera frame (640x480 BGR) to DMA buffer virtual addr (NO pre-resize)
+         *      PreRuntime was compiled with IMG_IWIDTH=640, IMG_IHEIGHT=480 →
+         *      it does the resize to model input size (640x640) internally.
+         *   2. Flush CPU cache so physical address is coherent
+         *   3. Pass: phy_addr, pre_in_shape_w=frame.cols, pre_in_shape_h=frame.rows */
+        const size_t copy_bytes = (size_t)frame.cols * frame.rows * frame.channels();
+        memcpy(m_drpai_buf->mem, frame.data, copy_bytes);
+
+        int fr = buffer_flush_dmabuf(m_drpai_buf->idx, m_drpai_buf->size);
+        if (fr != 0)
+            std::cerr << "[TrafficDetector] buffer_flush_dmabuf failed (ret=" << fr << ")\n";
+
         s_preproc_param_t pre_param;
-        pre_param.pre_in_addr = (uint64_t)frame.data;  /* BGR frame từ VideoCapture */
+        /* pre_in_shape must match the RAW camera frame written to DMA buf.
+         * R01: DRPAI_IN_WIDTH=640, DRPAI_IN_HEIGHT=640 (after padding to square).
+         * Our preprocess config: IMG_IWIDTH=640, IMG_IHEIGHT=480 (raw camera).
+         * Leaving at INVALID_SHAPE (0xFFFF) causes DRP-AI hardware to timeout. */
+        pre_param.pre_in_shape_w = (uint16_t)frame.cols;   /* 640 */
+        pre_param.pre_in_shape_h = (uint16_t)frame.rows;   /* 480 */
+        pre_param.pre_in_addr    = (uintptr_t)m_drpai_buf->phy_addr;
 
         void*    out_ptr  = nullptr;
         uint32_t out_size = 0;

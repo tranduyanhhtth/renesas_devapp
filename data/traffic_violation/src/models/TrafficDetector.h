@@ -17,15 +17,16 @@
 #ifdef WITH_DRP
 #include "MeraDrpRuntimeWrapper.h"
 #include "PreRuntime.h"
+#include "../drp/dmabuf.h"   /* DMA buffer for PreRuntime physical address */
 #endif
 
 class TrafficDetector
 {
 public:
     explicit TrafficDetector(const DetectorConfig& cfg);
-    ~TrafficDetector() = default;
+    ~TrafficDetector();
 
-    /* Load model. Trả về false nếu thất bại (app vẫn có thể chạy stub). */
+    /* Load model. Returns false if the runtime fails to load. */
     bool load(uint64_t drpai_base_addr = 0);
 
     /* Chạy inference trên frame (BGR, bất kỳ resolution). */
@@ -72,5 +73,6 @@ private:
     bool                  m_runtime_ok{false};
     bool                  m_pre_ok    {false};
     std::vector<float>    m_output_buf;
+    dma_buffer*           m_drpai_buf {nullptr}; /* MMNGR DMA buffer for PreRuntime */
 #endif
 };
