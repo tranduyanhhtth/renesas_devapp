@@ -22,29 +22,11 @@
  * under the License.
  *
  */
-/***********************************************************************************************************************
-* DISCLAIMER
-* This software is supplied by Renesas Electronics Corporation and is only intended for use with Renesas products. No
-* other uses are authorized. This software is owned by Renesas Electronics Corporation and is protected under all
-* applicable laws, including copyright laws.
-* THIS SOFTWARE IS PROVIDED "AS IS" AND RENESAS MAKES NO WARRANTIES REGARDING
-* THIS SOFTWARE, WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. ALL SUCH WARRANTIES ARE EXPRESSLY DISCLAIMED. TO THE MAXIMUM
-* EXTENT PERMITTED NOT PROHIBITED BY LAW, NEITHER RENESAS ELECTRONICS CORPORATION NOR ANY OF ITS AFFILIATED COMPANIES
-* SHALL BE LIABLE FOR ANY DIRECT, INDIRECT, SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES FOR ANY REASON RELATED TO THIS
-* SOFTWARE, EVEN IF RENESAS OR ITS AFFILIATES HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
-* Renesas reserves the right, without notice, to make changes to this software and to discontinue the availability of
-* this software. By using this software, you agree to the additional terms and conditions found by accessing the
-* following link:
-* http://www.renesas.com/disclaimer
-*
-* Copyright (C) 2024 Renesas Electronics Corporation. All rights reserved.
-***********************************************************************************************************************/
-/***********************************************************************************************************************
+/*******************************************************************************
 * File Name    : define.h
-* Version      : v5.00
-* Description  : RZ/V AI SDK Sample Application for Object Detection
-***********************************************************************************************************************/
+* Version      : v1.00
+* Description  : RZ/V AI SDK Sample Application for Object Detection (YOLOv8n)
+*******************************************************************************/
 
 #ifndef DEFINE_MACRO_H
 #define DEFINE_MACRO_H
@@ -83,29 +65,21 @@
 #endif
 
 /*****************************************
-* Static Variables for YOLOv8
-* Following variables need to be changed in order to custormize the AI model
+* Static Variables for YOLOv8n
+* Following variables need to be changed to customize the AI model
 *  - model_dir = directory name of DRP-AI TVM[*1] Model Object files
 ******************************************/
 /* Model Binary */
 const static std::string model_dir = "yolov8n_onnx";
 /* Pre-processing Runtime Object */
 const static std::string pre_dir = model_dir + "/preprocess";
-/*
- * YOLOv8 is ANCHOR-FREE — no anchor boxes required.
- * The ONNX export includes DFL decode + sigmoid inside the graph.
- * Output tensor shape: [1, 4+NUM_CLASS, NUM_GRID_TOTAL] = [1, 84, 8400]
- *   rows 0-3   : cx, cy, w, h  (pixel coords in MODEL_IN_W x MODEL_IN_H space)
- *   rows 4-83  : class probabilities (sigmoid already applied by model)
- * Reference: ultralytics/nn/modules/head.py :: Detect._inference()
- */
 /* Class labels to be classified */
 const static std::string label_list = "coco-labels-2014_2017.txt";
 /* Empty since labels will be loaded from label_list file */
 static std::vector<std::string> label_file_map = {};
 
 /*****************************************
-* Macro for YOLOv8
+* Macro for YOLOv8n
 ******************************************/
 
 /*Camera Capture Information */
@@ -141,30 +115,20 @@ static std::vector<std::string> label_file_map = {};
 
 /* Number of class to be detected */
 #define NUM_CLASS                   (80)
-/* YOLOv8 is anchor-free: no NUM_BB or anchor grids needed */
+/* YOLOv8 is anchor-free.
+ * Total detection points = 80x80 + 40x40 + 20x20 = 8400 */
+#define NUM_ANCHORS                 (8400)
+/* YOLOv8 output features per detection point: 4 (cx,cy,w,h) + 80 (class scores) */
+#define NUM_FEATURES                (84)
 /* Thresholds */
-#define TH_PROB                     (0.5f)
-#define TH_NMS                      (0.5f)
-/* Size of input image to the model (YOLOv8 default: 640x640) */
+#define TH_PROB                     (0.25f)
+#define TH_NMS                      (0.45f)
+/* Size of input image to the model (YOLOv8n: 640x640) */
 #define MODEL_IN_W                  (640)
 #define MODEL_IN_H                  (640)
 
-/*
- * YOLOv8 total anchor points for 640x640 input:
- *   stride 8  -> 80x80 = 6400
- *   stride 16 -> 40x40 = 1600
- *   stride 32 -> 20x20 =  400
- *   total               = 8400
- * Reference: ultralytics/utils/tal.py :: make_anchors()
- */
-#define NUM_GRID_TOTAL              (8400)
-
-/*
- * DRP-AI TVM output layout for YOLOv8 ONNX (post DFL decode):
- *   [4 + NUM_CLASS, NUM_GRID_TOTAL] = [84, 8400] = 705600 floats
- * Indexing: output[channel * NUM_GRID_TOTAL + anchor_idx]
- */
-const static uint32_t INF_OUT_SIZE = (4 + NUM_CLASS) * NUM_GRID_TOTAL;
+/* Number of DRP-AI output elements: NUM_FEATURES * NUM_ANCHORS */
+const static uint32_t INF_OUT_SIZE  = (uint32_t)(NUM_FEATURES) * (uint32_t)(NUM_ANCHORS);
 
 /*****************************************
 * Macro for Application

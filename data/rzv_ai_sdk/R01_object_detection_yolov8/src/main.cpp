@@ -254,6 +254,7 @@ int8_t get_result()
     /* Get the number of output of the target model. */
     output_num = runtime.GetNumOutput();
     size_count = 0;
+    static bool debug_printed = false;
     /*GetOutput loop*/
     for (i = 0;i<output_num;i++)
     {
@@ -261,6 +262,10 @@ int8_t get_result()
         output_buffer = runtime.GetOutput(i);
         /*Output Data Size = std::get<2>(output_buffer). */
         output_size = std::get<2>(output_buffer);
+        if (!debug_printed)
+            printf("[DEBUG] output[%d]: num_outputs=%d size=%ld type=%s\n",
+                i, output_num, output_size,
+                (std::get<0>(output_buffer)==InOutDataType::FLOAT32)?"FP32":"FP16");
 
         /*Output Data Type = std::get<0>(output_buffer)*/
         if (InOutDataType::FLOAT16 == std::get<0>(output_buffer))
@@ -290,122 +295,122 @@ int8_t get_result()
         }
         size_count += output_size;
     }
+    if (!debug_printed)
+    {
+        printf("[DEBUG] Total output elements: %u (expected %u)\n", size_count, INF_OUT_SIZE);
+        printf("[DEBUG] First 10 values: ");
+        for (int k = 0; k < 10 && k < (int)size_count; k++)
+            printf("%.4f ", drpai_output_buf[k]);
+        printf("\n");
+        /* YOLOv8 output layout: [84, 8400]
+         * Row 0=cx, 1=cy, 2=w, 3=h (pixel space), rows 4..83 = class scores */
+        printf("[DEBUG] YOLOv8 col 0 (detection point 0): cx=%.3f cy=%.3f w=%.3f h=%.3f cls0=%.3f\n",
+            drpai_output_buf[0 * 8400], drpai_output_buf[1 * 8400],
+            drpai_output_buf[2 * 8400], drpai_output_buf[3 * 8400],
+            drpai_output_buf[4 * 8400]);
+        debug_printed = true;
+    }
     return ret;
 }
 
-/*
- * NOTE: sigmoid() / softmax() / yolo_index() / yolo_offset() are NOT needed
- * for YOLOv8. The standard ONNX export from Ultralytics already includes:
- *   - DFL decode  (dist2bbox)  inside the graph
- *   - sigmoid     for class scores  inside the graph
- * Output tensor is fully decoded: [84, 8400] = [4+nc, total_anchors]
- * Reference: ultralytics/nn/modules/head.py :: Detect._inference()
- */
+/*****************************************
+* Function Name : sigmoid
+* Description   : Helper function for YOLO Post Processing
+* Arguments     : x = input argument for the calculation
+* Return value  : sigmoid result of input x
+******************************************/
+double sigmoid(double x)
+{
+    return 1.0/(1.0 + exp(-x));
+}
+
+/*****************************************
+* Function Name : softmax
+* Description   : Helper function for YOLO Post Processing
+* Arguments     : val[] = array to be computed softmax
+* Return value  : -
+******************************************/
+void softmax(float val[NUM_CLASS])
+{
+    float max_num = -FLT_MAX;
+    float sum = 0;
+    int32_t i;
+    for ( i = 0 ; i<NUM_CLASS ; i++ )
+    {
+        max_num = std::max(max_num, val[i]);
+    }
+
+    for ( i = 0 ; i<NUM_CLASS ; i++ )
+    {
+        val[i]= (float) exp(val[i] - max_num);
+        sum+= val[i];
+    }
+
+    for ( i = 0 ; i<NUM_CLASS ; i++ )
+    {
+        val[i]= val[i]/sum;
+    }
+    return;
+}
+
 
 /*****************************************
 * Function Name : R_Post_Proc
-* Description   : CPU post-processing for YOLOv8 anchor-free decoded output.
-*
-* YOLOv8 ONNX standard export (Ultralytics) produces a SINGLE output tensor:
-*   shape  : [1, 4 + NUM_CLASS, NUM_GRID_TOTAL] = [1, 84, 8400]
-*   layout : channel-first (row-major)
-*   access : output[channel * NUM_GRID_TOTAL + anchor_idx]
-*
-* Channels:
-*   [0]   cx   – box center x, absolute pixel in MODEL_IN_W space (DFL decoded)
-*   [1]   cy   – box center y, absolute pixel in MODEL_IN_H space (DFL decoded)
-*   [2]   w    – box width  in MODEL_IN_W space
-*   [3]   h    – box height in MODEL_IN_H space
-*   [4..83] class probability for class 0..79  (sigmoid already applied)
-*
-* No objectness score. Confidence = max_class_prob directly.
-* Reference: ultralytics/nn/modules/head.py :: Detect._inference()
-*            ultralytics/utils/tal.py       :: dist2bbox(), make_anchors()
-*
-* Coordinate scaling:
-*   The camera frame (CAM_IMAGE_WIDTH x CAM_IMAGE_HEIGHT = 640x480) is padded
-*   to square (640x640) before PreRuntime. Model output is in 640x640 space.
-*   Reverse: subtract vertical letterbox padding, then scale to camera coords.
-*   pad_y = (MODEL_IN_H - CAM_IMAGE_HEIGHT) / 2  = (640 - 480) / 2 = 80 px
-*
-* Arguments : floatarr = pointer to DRP-AI TVM output buffer (INF_OUT_SIZE floats)
-* Return value : -
+* Description   : Process CPU post-processing for YOLOv8n
+*                 The TVM compiled model contains the YOLOv8 decode head as CPU ops.
+*                 Output format: [84, 8400] stored row-major.
+*                   Rows 0-3  : cx, cy, w, h  (pixel space [0, MODEL_IN_W])
+*                   Rows 4-83 : class scores  (already sigmoid-decoded by TVM)
+*                 Access element: floatarr[row * NUM_ANCHORS + col]
+*                 YOLOv8 is anchor-free: confidence = max class score (no objectness).
+* Arguments     : floatarr = drpai output address
+* Return value  : -
 ******************************************/
 void R_Post_Proc(float* floatarr)
 {
-    /* This mutex processing is for measuring the exact processing time */
+    /* This mutex processing is for measuring the exact processing time and is not suitable for production. */
     mtx.lock();
 
-    int32_t i = 0;
-    float cx, cy, w, h;
-    float max_score;
-    int32_t pred_class;
+    int32_t k = 0;
+    float max_cls = 0;
+    int32_t pred_class = -1;
     detection d;
-
-    /* Compute letterbox reverse parameters:
-     * Camera is 640x480, model input is 640x640.
-     * PreRuntime pads 80px top and bottom (black rows).
-     * scale = min(MODEL_IN_W/CAM_W, MODEL_IN_H/CAM_H) = min(1.0, 1.333) = 1.0
-     * pad_x = (MODEL_IN_W - CAM_IMAGE_WIDTH  * scale) / 2 = 0
-     * pad_y = (MODEL_IN_H - CAM_IMAGE_HEIGHT * scale) / 2 = 80
-     */
-    const float scale = std::min(
-        (float)MODEL_IN_W / (float)CAM_IMAGE_WIDTH,
-        (float)MODEL_IN_H / (float)CAM_IMAGE_HEIGHT);
-    const float pad_x = ((float)MODEL_IN_W - (float)CAM_IMAGE_WIDTH  * scale) * 0.5f;
-    const float pad_y = ((float)MODEL_IN_H - (float)CAM_IMAGE_HEIGHT * scale) * 0.5f;
 
     /* Clear the detected result list */
     det.clear();
 
-    /*------------------------------------------------------------------
-     * Iterate over all 8400 anchor points
-     * Memory layout: floatarr[channel * NUM_GRID_TOTAL + anchor_idx]
-     *------------------------------------------------------------------*/
-    for (i = 0; i < NUM_GRID_TOTAL; i++)
+    for (uint32_t j = 0; j < NUM_ANCHORS; j++)
     {
-        /* Read decoded bbox in model-input-pixel space (640x640) */
-        cx = floatarr[0 * NUM_GRID_TOTAL + i];
-        cy = floatarr[1 * NUM_GRID_TOTAL + i];
-        w  = floatarr[2 * NUM_GRID_TOTAL + i];
-        h  = floatarr[3 * NUM_GRID_TOTAL + i];
-
-        /* Find the best class (sigmoid already applied by model graph) */
-        max_score  = 0.0f;
+        /* Find max class score across rows 4..83 */
+        max_cls   = 0.0f;
         pred_class = -1;
-        for (int32_t c = 0; c < NUM_CLASS; c++)
+        for (k = 0; k < NUM_CLASS; k++)
         {
-            float score = floatarr[(4 + c) * NUM_GRID_TOTAL + i];
-            if (score > max_score)
+            float s = floatarr[(4 + k) * NUM_ANCHORS + j];
+            if (s > max_cls)
             {
-                max_score  = score;
-                pred_class = c;
+                max_cls    = s;
+                pred_class = k;
             }
         }
 
-        /* Threshold filter */
-        if (max_score <= TH_PROB) continue;
+        /* Skip if best class score is below threshold */
+        if (max_cls < TH_PROB) continue;
 
-        /* Reverse letterbox: model 640x640 space → camera 640x480 space */
-        float cam_cx = (cx - pad_x) / scale;
-        float cam_cy = (cy - pad_y) / scale;
-        float cam_w  = w / scale;
-        float cam_h  = h / scale;
+        /* Box: cx, cy, w, h are decoded in model pixel space [0, MODEL_IN_W] */
+        float cx = floatarr[0 * NUM_ANCHORS + j];
+        float cy = floatarr[1 * NUM_ANCHORS + j];
+        float w  = floatarr[2 * NUM_ANCHORS + j];
+        float h  = floatarr[3 * NUM_ANCHORS + j];
 
-        /* Clamp to camera bounds */
-        cam_cx = std::max(0.0f, std::min(cam_cx, (float)CAM_IMAGE_WIDTH));
-        cam_cy = std::max(0.0f, std::min(cam_cy, (float)CAM_IMAGE_HEIGHT));
-        cam_w  = std::max(0.0f, std::min(cam_w,  (float)CAM_IMAGE_WIDTH));
-        cam_h  = std::max(0.0f, std::min(cam_h,  (float)CAM_IMAGE_HEIGHT));
-
-        Box bb = {cam_cx, cam_cy, cam_w, cam_h};
-        d = {bb, pred_class, max_score};
+        Box bb = { cx, cy, w, h };
+        d = { bb, pred_class, max_cls };
         det.push_back(d);
     }
 
     /* Non-Maximum Suppression filter */
-    filter_boxes_nms(det, det.size(), TH_NMS);
-    
+    filter_boxes_nms(det, (int32_t)det.size(), TH_NMS);
+
     mtx.unlock();
     return;
 }
@@ -657,11 +662,11 @@ void *R_Inf_Thread(void *threadid)
             goto err;
         }
 
-        /*Set Pre-processing output to be inference input. */
-        runtime.SetInput(0, (float*)output_ptr);
-
         /*Pre-process Time Result*/
         pre_time = (timedifference_msec(pre_start_time, pre_end_time) * TIME_COEF);
+
+        /*Set Pre-processing output to be inference input. */
+        runtime.SetInput(0, (float*)output_ptr);
 
         /*Gets inference starting time*/
         ret = timespec_get(&start_time, TIME_UTC);
@@ -705,7 +710,7 @@ void *R_Inf_Thread(void *threadid)
             goto err;
         }
 
-        /*CPU Post-Processing For YOLOv8*/
+        /*CPU Post-Processing For YOLOv3*/
         R_Post_Proc(drpai_output_buf);
         
         /*Gets Post-process End Time*/
