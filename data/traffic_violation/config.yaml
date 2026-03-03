@@ -12,30 +12,62 @@ video:
   # GStreamer pipeline tùy chỉnh (để trống thì auto-build từ source/width/height)
   gstreamer_pipeline: ""
 
-# ── Unified detector (single YOLOv3 model trained for all classes) ───────────
+# ── Unified detector (single model trained for all classes) ─────────────────
+# model_type controls post-processing dispatch:
+#   "yolov3" / "yolov5" : anchor-based decode (requires grids + anchors)
+#   "yolov8"            : anchor-free decode  (requires grids, no anchors needed)
+#
+# ── Option A: Custom-trained YOLOv3 (7 classes) ──────────────────────────────
+# detector:
+#   model_type:  "yolov3"
+#   model_dir:   "models/traffic_yolov3"
+#   pre_dir:     "models/traffic_yolov3/preprocess"
+#   label_file:  "models/traffic_yolov3/labels.txt"
+#   input_width:  416
+#   input_height: 416
+#   drpai_freq:   2
+#   conf_threshold: 0.50
+#   nms_threshold:  0.45
+#   num_class:   7
+#   num_bb:      3
+#   num_layers:  3
+#   grids:       [13, 26, 52]
+#   anchors:     [10,13, 16,30, 33,23, 30,61, 62,45, 59,119, 116,90, 156,198, 373,326]
+#   class_motorbike:     0
+#   class_car:           1
+#   class_truck:         2
+#   class_bus:           3
+#   class_person:        4
+#   class_helmet:        5
+#   class_license_plate: 6
+#
+# ── Option B: YOLOv8n COCO 80 classes (dùng model compile sẵn) ──────────────
+# Lưu ý: COCO không có class helmet/license_plate.
+# Dùng YOLOv8n để detect vehicle + person; class_helmet/class_lp đặt -1 để skip.
+# COCO class IDs: person=0, motorbike=3, car=2, bus=5, truck=7
 detector:
-  model_dir:   "models/traffic_yolov3"
-  pre_dir:     "models/traffic_yolov3/preprocess"
-  label_file:  "models/traffic_yolov3/labels.txt"
-  input_width:  416
-  input_height: 416
+  model_type:   "yolov8"
+  model_dir:    "models/yolov8n_onnx"
+  pre_dir:      "models/yolov8n_onnx/preprocess"
+  label_file:   "models/yolov8n_onnx/coco-labels-2014_2017.txt"
+  input_width:  640
+  input_height: 640
   drpai_freq:   2
-  conf_threshold: 0.50
+  conf_threshold: 0.25
   nms_threshold:  0.45
-  # YOLO architecture
-  num_class:   7
-  num_bb:      3
+  num_class:   80
+  num_bb:      1       # anchor-free – không dùng nhưng cần khai báo
   num_layers:  3
-  grids:       [13, 26, 52]
-  anchors:     [10,13, 16,30, 33,23, 30,61, 62,45, 59,119, 116,90, 156,198, 373,326]
-  # Class IDs (customize after training)
-  class_motorbike:     0
-  class_car:           1
-  class_truck:         2
-  class_bus:           3
-  class_person:        4
-  class_helmet:        5
-  class_license_plate: 6
+  grids:       [80, 40, 20]   # 80²+40²+20² = 8400 anchor points
+  # anchors: không cần cho yolov8
+  # Class IDs theo COCO label order:
+  class_motorbike:     3
+  class_car:           2
+  class_truck:         7
+  class_bus:           5
+  class_person:        0
+  class_helmet:        -1   # không có trong COCO → HelmetRule sẽ skip
+  class_license_plate: -1   # không có trong COCO → LP OCR sẽ skip
 
 # ── LP OCR ────────────────────────────────────────────────────────────────────
 enable_lp_ocr: true

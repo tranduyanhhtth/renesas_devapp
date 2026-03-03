@@ -41,9 +41,17 @@ private:
     /* CPU preprocessing: BGR → resize → chuyển HWC→CHW → /255 */
     void cpuPreprocess(const cv::Mat& src, std::vector<float>& dst) const;
 
-    /* YOLO post-processing giống R01's R_Post_Proc() */
+    /* YOLO post-processing: dispatch based on model_type */
     void postProcess(const float* buf, int frame_w, int frame_h,
                      std::vector<detection>& dets) const;
+
+    /* Anchor-based decode (YOLOv3 / YOLOv5) */
+    void postProcessAnchored(const float* buf, int frame_w, int frame_h,
+                             std::vector<detection>& dets) const;
+
+    /* Anchor-free decode (YOLOv8) – output [num_class+4, total_anchors] */
+    void postProcessYolov8(const float* buf, int frame_w, int frame_h,
+                           std::vector<detection>& dets) const;
 
     static double sigmoid(double x) { return 1.0 / (1.0 + std::exp(-x)); }
 

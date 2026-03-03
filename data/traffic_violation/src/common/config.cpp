@@ -28,6 +28,7 @@ static std::vector<float> nodeFloatList(const cv::FileNode& n) {
 
 static DetectorConfig parseDetector(const cv::FileNode& d) {
     DetectorConfig c;
+    c.model_type     = nodeStr  (d["model_type"], "yolov3");
     c.model_dir      = nodeStr  (d["model_dir"]);
     c.pre_dir        = nodeStr  (d["pre_dir"]);
     c.label_file     = nodeStr  (d["label_file"]);
@@ -40,10 +41,12 @@ static DetectorConfig parseDetector(const cv::FileNode& d) {
     c.num_layers = nodeInt(d["num_layers"], 3);
     auto grids = nodeIntList(d["grids"]);
     if (!grids.empty()) c.grids = grids;
-    else                c.grids = {13,26,52};
+    else if (c.model_type == "yolov8") c.grids = {80, 40, 20};
+    else                               c.grids = {13, 26, 52};
     auto anchors = nodeFloatList(d["anchors"]);
     if (!anchors.empty()) c.anchors = anchors;
-    else c.anchors = {10,13, 16,30, 33,23, 30,61, 62,45, 59,119, 116,90, 156,198, 373,326};
+    else if (c.model_type != "yolov8")
+        c.anchors = {10,13, 16,30, 33,23, 30,61, 62,45, 59,119, 116,90, 156,198, 373,326};
     c.class_motorbike     = nodeInt(d["class_motorbike"],     0);
     c.class_car           = nodeInt(d["class_car"],           1);
     c.class_truck         = nodeInt(d["class_truck"],         2);
