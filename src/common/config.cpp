@@ -4,6 +4,8 @@
  ******************************************************************************/
 #include "config.h"
 #include <iostream>
+#include <fstream>
+#include <sys/stat.h>
 
 static cv::FileNode safeNode(const cv::FileNode& p, const std::string& k) { return p[k]; }
 static std::string  nodeStr  (const cv::FileNode& n, const std::string& d="") {
@@ -57,17 +59,50 @@ static DetectorConfig parseDetector(const cv::FileNode& d) {
     return c;
 }
 
+static bool fileNonEmpty(const std::string& path) {
+    struct stat st;
+    if (stat(path.c_str(), &st) != 0) return false;  /* does not exist */
+    if (st.st_size == 0) return false;               /* empty file     */
+    /* Quick sanity: first byte should be printable (YAML starts with '%' or a key) */
+    std::ifstream f(path, std::ios::binary);
+    char c = 0;
+    return f.get(c) && c != '\0';
+}
+
 AppConfig AppConfig::fromFile(const std::string& path) {
     AppConfig cfg;
-    cv::FileStorage fs(path, cv::FileStorage::READ);
-    if (!fs.isOpened()) {
-        std::cerr << "[Config] Cannot open " << path << " – using defaults\n";
+
+    /* Guard against the OpenCV 4.1.0 bug that throws cv::Exception (error -49)
+     * when FileStorage::open() is called on an empty or missing YAML file,
+     * instead of simply returning isOpened()==false. */
+    if (!fileNonEmpty(path)) {
+        std::cerr << "[Config] '" << path << "' not found or empty – using defaults\n";
+        std::cerr << "[Config] Hint: copy config.yaml next to the binary, or pass path as argv[1]\n";
         cfg.detector.grids   = {13,26,52};
         cfg.detector.anchors = {10,13, 16,30, 33,23, 30,61, 62,45, 59,119, 116,90, 156,198, 373,326};
         return cfg;
     }
+
+    cv::FileStorage fs;
+    try {
+        fs.open(path, cv::FileStorage::READ);
+    } catch (const cv::Exception& e) {
+        std::cerr << "[Config] cv::FileStorage exception on '" << path << "': " << e.what() << "\n";
+        std::cerr << "[Config] Using defaults\n";
+        cfg.detector.grids   = {13,26,52};
+        cfg.detector.anchors = {10,13, 16,30, 33,23, 30,61, 62,45, 59,119, 116,90, 156,198, 373,326};
+        return cfg;
+    }
+    if (!fs.isOpened()) {
+        std::cerr << "[Config] Cannot open '" << path << "' – using defaults\n";
+        cfg.detector.grids   = {13,26,52};
+        cfg.detector.anchors = {10,13, 16,30, 33,23, 30,61, 62,45, 59,119, 116,90, 156,198, 373,326};
+        return cfg;
+    }
+    std::cout << "[Config] Loaded: " << path << "\n";
     // video
     auto vi = fs["video"];
+    cfg.video_source_type    = nodeStr  (vi["source_type"], "file");
     cfg.video_source         = nodeStr  (vi["source"], "0");
     cfg.video_width          = nodeInt  (vi["width"],  1920);
     cfg.video_height         = nodeInt  (vi["height"], 1080);

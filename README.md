@@ -181,6 +181,43 @@ make -j$(nproc)
 
 ---
 
+## Switch nguồn video (config.yaml)
+
+Chỉ cần thay **2 dòng** `source_type` + `source` trong `config.yaml`:
+
+| `source_type` | `source` | Mô tả |
+|---|---|---|
+| `"file"` | `/path/to/video.mp4` | Video MP4/AVI – test offline |
+| `"usb"` | `/dev/video0` hoặc `"0"` | USB camera qua v4l2src |
+| `"mipi"` | `/dev/video0` | MIPI CSI-2 OV5645 trên RZ/V2L (media-ctl tự động) |
+| `"rtsp"` | `rtsp://ip:port/stream` | Camera IP qua mạng |
+| `"custom"` | *(bỏ trống)* | Dùng nguyên `gstreamer_pipeline` tùy biến |
+
+**Ví dụ switch sang USB camera:**
+```yaml
+video:
+  source_type: "usb"
+  source: "/dev/video0"
+  width:  640
+  height: 480
+  fps:    30
+```
+
+**Ví dụ switch sang MIPI (RZ/V2L board):**
+```yaml
+video:
+  source_type: "mipi"
+  source: "/dev/video0"
+  width:  640
+  height: 480
+  fps:    30
+```
+Khi `source_type: "mipi"`, app tự động chạy 4 lệnh `media-ctl` giống `mipi_cam_init()` trong R01_object_detection.  
+
+**Loop video file (test):** Trong `main.cpp`, đổi `loop_file= false` thành `true` để video tự replay.
+
+---
+
 ## Cấu hình scene (config.yaml)
 
 Mỗi camera/ngã tư cần căn chỉnh:
