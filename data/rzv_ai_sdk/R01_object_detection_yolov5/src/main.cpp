@@ -254,6 +254,7 @@ int8_t get_result()
     /* Get the number of output of the target model. */
     output_num = runtime.GetNumOutput();
     size_count = 0;
+    static bool debug_printed = false;
     /*GetOutput loop*/
     for (i = 0;i<output_num;i++)
     {
@@ -261,6 +262,10 @@ int8_t get_result()
         output_buffer = runtime.GetOutput(i);
         /*Output Data Size = std::get<2>(output_buffer). */
         output_size = std::get<2>(output_buffer);
+        if (!debug_printed)
+            printf("[DEBUG] output[%d]: num_outputs=%d size=%ld type=%s\n",
+                i, output_num, output_size,
+                (std::get<0>(output_buffer)==InOutDataType::FLOAT32)?"FP32":"FP16");
 
         /*Output Data Type = std::get<0>(output_buffer)*/
         if (InOutDataType::FLOAT16 == std::get<0>(output_buffer))
@@ -289,6 +294,22 @@ int8_t get_result()
             break;
         }
         size_count += output_size;
+    }
+    if (!debug_printed)
+    {
+        printf("[DEBUG] Total output elements: %u\n", size_count);
+        printf("[DEBUG] First 10 values: ");
+        for (int k = 0; k < 10 && k < (int)size_count; k++)
+            printf("%.4f ", drpai_output_buf[k]);
+        printf("\n");
+        printf("[DEBUG] Values at stride 85 (anchor 0..4 obj+class):\n");
+        for (int a = 0; a < 3 && a*85 < (int)size_count; a++)
+            printf("  anchor[%d]: cx=%.3f cy=%.3f w=%.3f h=%.3f obj=%.3f cls0=%.3f\n",
+                a,
+                drpai_output_buf[a*85+0], drpai_output_buf[a*85+1],
+                drpai_output_buf[a*85+2], drpai_output_buf[a*85+3],
+                drpai_output_buf[a*85+4], drpai_output_buf[a*85+5]);
+        debug_printed = true;
     }
     return ret;
 }
@@ -373,6 +394,12 @@ int32_t yolo_offset(uint8_t n, int32_t b, int32_t y, int32_t x)
 /*****************************************
 * Function Name : R_Post_Proc
 * Description   : Process CPU post-processing for YOLOv5
+*                 The TVM compiled model already contains the YOLOv5 decode head
+*                 (sigmoid, anchor multiply, grid offset) as CPU ops in the graph.
+*                 Output format: flat [N, 85] where N = 3*(20*20+40*40+80*80) = 25200
+*                 Columns: [cx, cy, w, h, objectness, class0..class79]
+*                 All values are already decoded (no sigmoid needed here).
+*                 Coordinates are in model input pixel space [0, MODEL_IN_W].
 * Arguments     : floatarr = drpai output address
 * Return value  : -
 ******************************************/
@@ -381,115 +408,97 @@ void R_Post_Proc(float* floatarr)
     /* This mutex processing is for measuring the exact processing time and is not suitable for production. */
     mtx.lock();
 
-    /* Following variables are required for correct_yolo_boxes in Darknet implementation*/
-    /* Note: This implementation refers to the "darknet detector test" */
-    float new_w, new_h;
-    float correct_w = 1.;
-    float correct_h = 1.;
-    if ((float) (MODEL_IN_W / correct_w) < (float) (MODEL_IN_H/correct_h) )
-    {
-        new_w = (float) MODEL_IN_W;
-        new_h = correct_h * MODEL_IN_W / correct_w;
-    }
-    else
-    {
-        new_w = correct_w * MODEL_IN_H / correct_h;
-        new_h = MODEL_IN_H;
-    }
-    int32_t n = 0;
-    int32_t b = 0;
-    int32_t y = 0;
-    int32_t x = 0;
-    int32_t offs = 0;
     int32_t i = 0;
-    float tx = 0;
-    float ty = 0;
-    float tw = 0;
-    float th = 0;
-    float tc = 0;
-    float center_x = 0;
-    float center_y = 0;
-    float box_w = 0;
-    float box_h = 0;
     float objectness = 0;
-    uint8_t num_grid = 0;
-    uint8_t anchor_offset = 0;
-    float classes[NUM_CLASS];
     float max_pred = 0;
     int32_t pred_class = -1;
     float probability = 0;
     detection d;
 
+    /* Total number of anchor predictions = 3 * (20^2 + 40^2 + 80^2) = 25200 */
+    const uint32_t num_anchors = (uint32_t)(NUM_BB * (
+        num_grids[0] * num_grids[0] +
+        num_grids[1] * num_grids[1] +
+        num_grids[2] * num_grids[2]));
+    /* Each anchor has (5 + NUM_CLASS) values: cx,cy,w,h,obj,class[0..79] */
+    const int32_t stride = NUM_CLASS + 5;
+
     /* Clear the detected result list */
     det.clear();
-    
-    /*Post Processing Start*/
-    for (n = 0; n < NUM_INF_OUT_LAYER; n++)
+
+    /* Debug scan: find max objectness and count anchors above thresholds */
+    static bool postproc_debug = false;
+    if (!postproc_debug)
     {
-        num_grid = num_grids[n];
-        anchor_offset = 2 * NUM_BB * (NUM_INF_OUT_LAYER - (n + 1));
-        
-        for(b = 0; b < NUM_BB; b++)
+        float max_obj = 0, max_prob = 0;
+        int cnt1=0, cnt3=0, cnt5=0;
+        int max_obj_idx = -1;
+        for (uint32_t idx = 0; idx < num_anchors; idx++)
         {
-            for(y = 0; y < num_grid; y++)
+            const float* a = floatarr + idx * stride;
+            float obj = a[4];
+            if (obj > max_obj) { max_obj = obj; max_obj_idx = idx; }
+            if (obj > 0.1f) cnt1++;
+            if (obj > 0.3f) cnt3++;
+            if (obj > 0.5f) cnt5++;
+            /* best class prob */
+            float mp = 0;
+            for (int ci = 0; ci < NUM_CLASS; ci++)
             {
-                for(x = 0; x < num_grid; x++)
-                {
-                    offs = yolo_offset(n, b, y, x);
-                    tc = floatarr[yolo_index(n, offs, 4)];
-                    tx = floatarr[offs];
-                    ty = floatarr[yolo_index(n, offs, 1)];
-                    tw = floatarr[yolo_index(n, offs, 2)];
-                    th = floatarr[yolo_index(n, offs, 3)];
-                    /* Compute the bounding box */
-                    /* YOLOv5 decoding formula (differs from YOLOv3): */
-                    /* center: (grid + 2*sigmoid(t) - 0.5) / grid_size    */
-                    /* wh:     anchor * exp(2*sigmoid(t))^2               */
-                    center_x = ((float) x + 2.0f * sigmoid(tx) - 0.5f) / (float) num_grid;
-                    center_y = ((float) y + 2.0f * sigmoid(ty) - 0.5f) / (float) num_grid;
-                    box_w = (float)(exp(2.0f * sigmoid(tw)) * anchors[anchor_offset+2*b+0]) / (float) MODEL_IN_W;
-                    box_h = (float)(exp(2.0f * sigmoid(th)) * anchors[anchor_offset+2*b+1]) / (float) MODEL_IN_W;
-                    /* Adjustment for VGA size */
-                    /* correct_yolo_boxes */
-                    center_x = (center_x - (MODEL_IN_W - new_w) / 2. / MODEL_IN_W) / ((float) new_w / MODEL_IN_W);
-                    center_y = (center_y - (MODEL_IN_H - new_h) / 2. / MODEL_IN_H) / ((float) new_h / MODEL_IN_H);
-                    box_w *= (float) (MODEL_IN_W / new_w);
-                    box_h *= (float) (MODEL_IN_H / new_h);
-                    center_x = round(center_x * DRPAI_IN_WIDTH);
-                    center_y = round(center_y * DRPAI_IN_HEIGHT);
-                    box_w = round(box_w * DRPAI_IN_WIDTH);
-                    box_h = round(box_h * DRPAI_IN_HEIGHT);
-                    objectness = sigmoid(tc);
-                    Box bb = {center_x, center_y, box_w, box_h};
-                    /* Get the class prediction */
-                    for (i = 0; i < NUM_CLASS; i++)
-                    {
-                        classes[i] = sigmoid(floatarr[yolo_index(n, offs, 5+i)]);
-                    }
-                    max_pred = 0;
-                    pred_class = -1;
-                    for (i = 0; i < NUM_CLASS; i++)
-                    {
-                        if (classes[i] > max_pred)
-                        {
-                            pred_class = i;
-                            max_pred = classes[i];
-                        }
-                    }
-                    /* Store the result into the list if the probability is more than the threshold */
-                    probability = max_pred * objectness;
-                    if (probability > TH_PROB)
-                    {
-                        d = {bb, pred_class, probability};
-                        det.push_back(d);
-                    }
-                }
+                /* class scores already decoded [0,1] */
+                if (a[5+ci] > mp) mp = a[5+ci];
+            }
+            float p = obj * mp;
+            if (p > max_prob) max_prob = p;
+        }
+        printf("[POSTDBG] max_obj=%.4f  cnt>0.1:%d  cnt>0.3:%d  cnt>0.5:%d  max_prob=%.4f\n",
+               max_obj, cnt1, cnt3, cnt5, max_prob);
+        if (max_obj_idx >= 0)
+        {
+            const float* a = floatarr + max_obj_idx * stride;
+            printf("[POSTDBG] best anchor[%d]: cx=%.1f cy=%.1f w=%.1f h=%.1f obj=%.4f\n",
+                   max_obj_idx, a[0], a[1], a[2], a[3], a[4]);
+        }
+        postproc_debug = true;
+    }
+
+    for (uint32_t idx = 0; idx < num_anchors; idx++)
+    {
+        const float* anchor = floatarr + idx * stride;
+
+        /* Objectness is already sigmoid-decoded by TVM graph [0,1] */
+        objectness = anchor[4];
+
+        /* Early exit: skip if objectness is below threshold */
+        if (objectness < TH_PROB) continue;
+
+        /* Class scores are already sigmoid-decoded [0,1] by TVM fused op.
+         * (The fused op applies sigmoid to all 85 values, then decodes cx,cy,w,h further) */
+        max_pred = 0;
+        pred_class = -1;
+        for (i = 0; i < NUM_CLASS; i++)
+        {
+            if (anchor[5 + i] > max_pred)
+            {
+                pred_class = i;
+                max_pred = anchor[5 + i];
             }
         }
+
+        /* Final confidence = objectness * class_score (both already in [0,1]) */
+        probability = objectness * max_pred;
+        if (probability > TH_PROB)
+        {
+            /* cx,cy,w,h already decoded in model input pixel space [0, MODEL_IN_W] */
+            Box bb = { anchor[0], anchor[1], anchor[2], anchor[3] };
+            d = { bb, pred_class, probability };
+            det.push_back(d);
+        }
     }
-    /* Non-Maximum Supression filter */
-    filter_boxes_nms(det, det.size(), TH_NMS);
-    
+
+    /* Non-Maximum Suppression filter */
+    filter_boxes_nms(det, (int32_t)det.size(), TH_NMS);
+
     mtx.unlock();
     return;
 }
@@ -741,11 +750,17 @@ void *R_Inf_Thread(void *threadid)
             goto err;
         }
 
-        /*Set Pre-processing output to be inference input. */
-        runtime.SetInput(0, (float*)output_ptr);
-
         /*Pre-process Time Result*/
         pre_time = (timedifference_msec(pre_start_time, pre_end_time) * TIME_COEF);
+
+        /*Set Pre-processing output to be inference input. */
+        {
+            struct timespec si_start, si_end;
+            timespec_get(&si_start, TIME_UTC);
+            runtime.SetInput(0, (float*)output_ptr);
+            timespec_get(&si_end, TIME_UTC);
+            printf("[TIMING] SetInput  : %.1f ms\n", timedifference_msec(si_start, si_end) * TIME_COEF);
+        }
 
         /*Gets inference starting time*/
         ret = timespec_get(&start_time, TIME_UTC);
@@ -753,6 +768,17 @@ void *R_Inf_Thread(void *threadid)
         {
             fprintf(stderr, "[ERROR] Failed to get Inference Start Time\n");
             goto err;
+        }
+
+        /*One-time profile to diagnose per-op timing*/
+        {
+            static bool profile_done = false;
+            if (!profile_done) {
+                profile_done = true;
+                printf("[PROFILE] Running one-time ProfileRun...\n");
+                runtime.ProfileRun("/tmp/profile_table.txt", "/tmp/profile.csv", drpai_freq);
+                printf("[PROFILE] Done. Check /tmp/profile_table.txt and /tmp/profile.csv\n");
+            }
         }
 
         #ifdef V2H
@@ -770,6 +796,8 @@ void *R_Inf_Thread(void *threadid)
         }
         /*Inference Time Result*/
         ai_time = (timedifference_msec(start_time, inf_end_time) * TIME_COEF);
+        printf("[TIMING] PreProc   : %.1f ms\n", pre_time);
+        printf("[TIMING] Inference : %.1f ms\n", ai_time);
 
         /*Gets Post-process starting time*/
         ret = timespec_get(&post_start_time, TIME_UTC);
