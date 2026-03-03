@@ -1,6 +1,5 @@
 ##############################################################################
 # exe_v2l/config.yaml  - Deployment config for RZ/V2L board
-# Single model: custom YOLOv3 trained for traffic violation detection
 ##############################################################################
 
 # -- Video input --------------------------------------------------------------
@@ -11,72 +10,95 @@ video:
   fps:    20
   gstreamer_pipeline: ""
 
-# -- Unified detector (single model) -----------------------------------------
+# -- Detector -----------------------------------------------------------------
+# model_type: "yolov8"  -> anchor-free,  output [num_class+4, total_anchors]
+# model_type: "yolov3"  -> anchor-based, requires grids + anchors
+#
+# OPTION A: YOLOv8n COCO 80 classes (model compile san co tai tutorials/yolov8n_onnx/)
 detector:
-  model_dir:   "models/traffic_yolov3"
-  pre_dir:     "models/traffic_yolov3/preprocess"
-  label_file:  "models/traffic_yolov3/labels.txt"
-  input_width:  416
-  input_height: 416
+  model_type:   "yolov8"
+  model_dir:    "models/yolov8n_onnx"
+  pre_dir:      "models/yolov8n_onnx/preprocess"
+  label_file:   "models/yolov8n_onnx/coco-labels-2014_2017.txt"
+  input_width:  640
+  input_height: 640
   drpai_freq:   2
-  conf_threshold: 0.50
+  conf_threshold: 0.25
   nms_threshold:  0.45
-  num_class:   7
-  num_bb:      3
+  num_class:   80
+  num_bb:      1
   num_layers:  3
-  grids:       [13, 26, 52]
-  anchors:     [10,13, 16,30, 33,23, 30,61, 62,45, 59,119, 116,90, 156,198, 373,326]
-  class_motorbike:     0
-  class_car:           1
-  class_truck:         2
-  class_bus:           3
-  class_person:        4
-  class_helmet:        5
-  class_license_plate: 6
+  grids:       [80, 40, 20]
+  # COCO class IDs (coco-labels-2014_2017.txt order):
+  class_motorbike:     3
+  class_car:           2
+  class_truck:         7
+  class_bus:           5
+  class_person:        0
+  class_helmet:        -1   # khong co trong COCO -> HelmetRule skip
+  class_license_plate: -1   # khong co trong COCO -> LP OCR skip
 
-# -- LP OCR -------------------------------------------------------------------
-enable_lp_ocr: true
+# OPTION B: Custom YOLOv3 7 classes (can tu train + compile)
+# detector:
+#   model_type:  "yolov3"
+#   model_dir:   "models/traffic_yolov3"
+#   pre_dir:     "models/traffic_yolov3/preprocess"
+#   label_file:  "models/traffic_yolov3/labels.txt"
+#   input_width:  416
+#   input_height: 416
+#   drpai_freq:   2
+#   conf_threshold: 0.50
+#   nms_threshold:  0.45
+#   num_class:   7
+#   num_bb:      3
+#   num_layers:  3
+#   grids:       [13, 26, 52]
+#   anchors:     [10,13, 16,30, 33,23, 30,61, 62,45, 59,119, 116,90, 156,198, 373,326]
+#   class_motorbike:     0
+#   class_car:           1
+#   class_truck:         2
+#   class_bus:           3
+#   class_person:        4
+#   class_helmet:        5
+#   class_license_plate: 6
 
-# -- DRP-AI hardware ----------------------------------------------------------
+enable_lp_ocr: false   # COCO khong co LP -> tat
+
 drpai:
-  freq_index: 2
-  mem_offset: 0
+  freq_index:  2
+  mem_offset:  0
 
-# -- Scene (adjust to actual camera) -----------------------------------------
+# -- Scene ROI ----------------------------------------------------------------
 scene:
   stop_line:
     y1: 0.60
     y2: 0.63
-
-  lane_zones:
-    motorbike: { x_min: 0.00, x_max: 0.55 }
-    car:       { x_min: 0.20, x_max: 0.80 }
-    truck:     { x_min: 0.20, x_max: 1.00 }
-
-  # Vạch phân làn tĩnh (điều chỉnh theo camera thực tế)
-  lane_lines:
-    - { x_norm: 0.33, overlap_px: 10 }
-    - { x_norm: 0.66, overlap_px: 10 }
-
   traffic_light_roi:
     x: 0.80
     y: 0.05
     w: 0.08
     h: 0.20
+  lane_zones:
+    motorbike: { x_min: 0.00, x_max: 0.50 }
+    car:       { x_min: 0.25, x_max: 0.75 }
+    truck:     { x_min: 0.25, x_max: 1.00 }
+  lane_lines:
+    - { x_norm: 0.33, overlap_px: 10 }
+    - { x_norm: 0.66, overlap_px: 10 }
 
 # -- Violation engine ---------------------------------------------------------
 violation:
   rules:
-    helmet:     true
+    helmet:     false   # tat vi class_helmet=-1
     red_light:  true
     wrong_lane: true
     lane_line:  true
-  cooldown_sec:  5.0
+  cooldown_sec: 5.0
   confirm_frames: 3
 
 # -- Output -------------------------------------------------------------------
 output:
-  save_dir: "/home/root/traffic_violation/violations"
+  save_dir: "./violations"
   filename_pattern: "{plate}_{datetime}_{violation}"
   save_full_frame: true
   save_json: true

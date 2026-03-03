@@ -19,12 +19,22 @@ struct DetectorConfig {
     float nms_threshold  = 0.45f;
     int   drpai_freq     = 2;
 
-    /* YOLOv3 architecture – match training config */
+    /* Model variant – controls post-processing dispatch:
+     *   "yolov3" / "yolov5" : anchor-based, output [N, num_bb*(num_class+5)*grid^2]
+     *   "yolov8"            : anchor-free,  output [num_class+4, num_anchors_total] */
+    std::string model_type = "yolov3";
+
+    /* YOLOv3/v5 architecture – match training config */
     int   num_class  = 7;
     int   num_bb     = 3;
     int   num_layers = 3;
-    std::vector<int>   grids;    /* e.g. {13,26,52} */
-    std::vector<float> anchors;  /* 2*num_bb*num_layers values */
+    std::vector<int>   grids;    /* yolov3/v5: {13,26,52}  |  yolov8: {80,40,20} */
+    std::vector<float> anchors;  /* yolov3/v5 only: 2*num_bb*num_layers values */
+
+    /* Total anchor points = sum(g*g for g in grids). Computed automatically. */
+    int totalAnchors() const {
+        int t = 0; for (int g : grids) t += g * g; return t;
+    }
 
     /* Class ID assignments (match label order used during training) */
     int class_motorbike     = 0;
@@ -41,8 +51,9 @@ struct DetectorConfig {
             || c == class_truck    || c == class_bus;
     }
     bool isRider(int c) const { return c == class_person; }
-    bool isHelmet(int c) const { return c == class_helmet; }
-    bool isLP(int c) const { return c == class_license_plate; }
+    /* Guard against -1 (class not present in this model, e.g. COCO has no helmet) */
+    bool isHelmet(int c) const { return class_helmet        >= 0 && c == class_helmet; }
+    bool isLP    (int c) const { return class_license_plate >= 0 && c == class_license_plate; }
 };
 
 /* ─── Scene / rules / output config ─────────────────────────────────────── */

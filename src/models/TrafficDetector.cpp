@@ -24,10 +24,17 @@ static inline float fp16_to_fp32(uint16_t a) {
 TrafficDetector::TrafficDetector(const DetectorConfig& cfg)
     : m_cfg(cfg)
 {
-    /* Compute output buffer size từ YOLO params */
+    /* Compute output buffer size from model type */
     m_inf_out_size = 0;
-    for (int g : m_cfg.grids)
-        m_inf_out_size += (m_cfg.num_class + 5) * m_cfg.num_bb * g * g;
+    if (m_cfg.model_type == "yolov8") {
+        /* YOLOv8: output shape [num_class+4, total_anchors]
+         * total_anchors = sum(grid^2) for grids e.g. {80,40,20} = 8400 */
+        m_inf_out_size = (m_cfg.num_class + 4) * m_cfg.totalAnchors();
+    } else {
+        /* YOLOv3/v5: output shape [layers, num_bb*(num_class+5)*grid^2] */
+        for (int g : m_cfg.grids)
+            m_inf_out_size += (m_cfg.num_class + 5) * m_cfg.num_bb * g * g;
+    }
 }
 
 /* ── load ─────────────────────────────────────────────────────────────────── */
@@ -115,10 +122,66 @@ int32_t TrafficDetector::yolo_index(int n, int offs, int channel) const
     return offs + channel * num_grid * num_grid;
 }
 
-/* ── postProcess ─────────────────────────────────────────────────────────── */
+/* ── postProcess: dispatch ────────────────────────────────────────────────────────────── */
 void TrafficDetector::postProcess(const float* floatarr,
                                    int frame_w, int frame_h,
                                    std::vector<detection>& dets) const
+{
+    dets.clear();
+    if (m_cfg.model_type == "yolov8")
+        postProcessYolov8(floatarr, frame_w, frame_h, dets);
+    else
+        postProcessAnchored(floatarr, frame_w, frame_h, dets);
+}
+
+/* ── postProcessYolov8 ───────────────────────────────────────────────────────────── */
+/* Output layout (DRP-AI TVM-compiled YOLOv8):                                  */
+/*   Flat array [num_class+4, total_anchors] stored row-major.                  */
+/*   Row 0-3   : cx, cy, w, h in model pixel space [0, input_width]             */
+/*   Row 4-..  : class scores, already sigmoid-decoded by TVM                   */
+/*   Confidence = max class score (anchor-free, no objectness).                 */
+void TrafficDetector::postProcessYolov8(const float* floatarr,
+                                         int frame_w, int frame_h,
+                                         std::vector<detection>& dets) const
+{
+    const int   NA        = m_cfg.totalAnchors();  /* e.g. 8400 for 640x640 */
+    const int   NC        = m_cfg.num_class;
+    const float scale_x   = static_cast<float>(frame_w) / m_cfg.input_width;
+    const float scale_y   = static_cast<float>(frame_h) / m_cfg.input_height;
+
+    for (int j = 0; j < NA; j++)
+    {
+        /* Find best class (rows 4 .. 4+NC-1) */
+        float max_cls  = 0.f;
+        int   pred_cls = -1;
+        for (int k = 0; k < NC; k++) {
+            float s = floatarr[(4 + k) * NA + j];
+            if (s > max_cls) { max_cls = s; pred_cls = k; }
+        }
+        if (max_cls < m_cfg.conf_threshold) continue;
+
+        /* Box in model pixel space → scale to frame pixels */
+        float cx = floatarr[0 * NA + j] * scale_x;
+        float cy = floatarr[1 * NA + j] * scale_y;
+        float w  = floatarr[2 * NA + j] * scale_x;
+        float h  = floatarr[3 * NA + j] * scale_y;
+
+        detection d;
+        d.bbox = { cx, cy, w, h };
+        d.c    = pred_cls;
+        d.prob = max_cls;
+        dets.push_back(d);
+    }
+
+    filter_boxes_nms(dets, static_cast<int32_t>(dets.size()), m_cfg.nms_threshold);
+    dets.erase(std::remove_if(dets.begin(), dets.end(),
+               [](const detection& d){ return d.prob == 0.f; }), dets.end());
+}
+
+/* ── postProcessAnchored (YOLOv3 / YOLOv5) ─────────────────────────────── */
+void TrafficDetector::postProcessAnchored(const float* floatarr,
+                                           int frame_w, int frame_h,
+                                           std::vector<detection>& dets) const
 {
     dets.clear();
 
