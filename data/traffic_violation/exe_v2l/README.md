@@ -139,6 +139,8 @@ NOPLATE_20260302_143210_789_LANE_LINE_CROSS.jpg
 
 | Lỗi | Nguyên nhân | Cách sửa |
 |---|---|---|
+| `Input file is empty` (OpenCV crash) | `config.yaml` không tồn tại hoặc rỗng | Copy `exe_v2l/config.yaml` vào cùng thư mục với binary, hoặc truyền path: `./traffic_violation_app /full/path/config.yaml` |
+| `config.yaml not found or empty` | Binary tìm config theo `exeDir()` nhưng file thiếu | Copy `config.yaml` vào `~/traffic_violation/` |
 | `TrafficDetector::load() failed` | Thiếu `deploy.so` hoặc sai `model_dir` | Kiểm tra đường dẫn trong `config.yaml` |
 | `Failed to load deploy.so` | Binary V2H dùng trên V2L | Compile lại cho V2L (Bước 2) |
 | `Cannot open video source` | Sai đường dẫn hoặc camera index | Chỉnh `video.source` |

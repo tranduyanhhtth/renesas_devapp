@@ -34,6 +34,7 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 
 #include "common/config.h"
 #include "common/types.h"
@@ -565,14 +566,27 @@ int main(int argc, char* argv[])
                               ? std::string(argv[1])
                               : resolvePath(base, "config.yaml");
 
+    /* If config not found next to the binary, fall back to cwd */
+    {
+        struct stat _st;
+        if (argc == 1 && stat(config_path.c_str(), &_st) != 0) {
+            config_path = "config.yaml";
+            fprintf(stderr, "[Main] config.yaml not found next to binary – "
+                            "trying cwd\n");
+        }
+    }
+
+    /* Print paths BEFORE loading so the user sees them even if load crashes */
+    printf("[Main] Exe dir  : %s\n", base.c_str());
+    printf("[Main] Config   : %s\n", config_path.c_str());
+    fflush(stdout);
+
     g_cfg = AppConfig::fromFile(config_path);
     g_cfg.detector.model_dir  = resolvePath(base, g_cfg.detector.model_dir);
     g_cfg.detector.pre_dir    = resolvePath(base, g_cfg.detector.pre_dir);
     g_cfg.detector.label_file = resolvePath(base, g_cfg.detector.label_file);
     g_cfg.output.save_dir     = resolvePath(base, g_cfg.output.save_dir);
 
-    printf("[Main] Exe dir  : %s\n", base.c_str());
-    printf("[Main] Config   : %s\n", config_path.c_str());
     printf("[Main] Model    : %s\n", g_cfg.detector.model_dir.c_str());
     printf("[Main] Input    : %dx%d  fps=%d\n",
            g_cfg.video_width, g_cfg.video_height, g_cfg.video_fps);
@@ -603,8 +617,11 @@ int main(int argc, char* argv[])
     g_lp_regex     = create_lp_regex_list();
     g_lp_validator = new LpValidator();
     g_video        = new VideoInput(g_cfg.video_source,
+                                    sourceTypeFromString(g_cfg.video_source_type),
                                     g_cfg.video_width, g_cfg.video_height,
-                                    g_cfg.video_fps, g_cfg.gstreamer_pipeline);
+                                    g_cfg.video_fps,
+                                    g_cfg.gstreamer_pipeline,
+                                    /* loop_file= */ false);
 
     if (g_cfg.violation.helmet)
         g_engine->addRule(std::make_shared<HelmetRule>());

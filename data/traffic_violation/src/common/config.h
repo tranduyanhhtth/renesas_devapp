@@ -93,8 +93,15 @@ struct OutputConfig {
 
 /* ─── AppConfig ──────────────────────────────────────────────────────────── */
 struct AppConfig {
-    /* Video */
+    /* Video
+     * source_type: "file"  → video file  (source = /path/to/video.mp4)
+     *              "usb"   → USB camera  (source = /dev/video0 or index "0")
+     *              "mipi"  → MIPI camera (source = /dev/video0, runs media-ctl)
+     *              "rtsp"  → RTSP stream (source = rtsp://ip:port/stream)
+     *              "custom"→ use gstreamer_pipeline verbatim
+     */
     std::string video_source;
+    std::string video_source_type = "file";   /* file | usb | mipi | rtsp | custom */
     int   video_width  = 1920;
     int   video_height = 1080;
     int   video_fps    = 30;

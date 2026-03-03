@@ -4,13 +4,27 @@
 ##############################################################################
 
 # ── Video input ──────────────────────────────────────────────────────────────
+# Để switch nguồn video, chỉ cần thay 2 dòng source_type + source:
+#
+#   source_type  |  source                           |  Mô tả
+#   -------------|-----------------------------------|---------------------------
+#   "file"       |  /path/to/video.mp4               |  Video file (test offline)
+#   "mipi"       |  /dev/video0                      |  MIPI CSI-2 trên RZ/V2L
+#                |                                   |  (tự chạy media-ctl init)
 video:
-  source: "sample_intersection.mp4"   # đường dẫn file video hoặc index camera USB
+  # --- file: chạy thử với video offline (host x86 hoặc board) ---
+  # source_type: "file"
+  # source: "sample_intersection.mp4"
+
+  # --- mipi: camera MIPI trực tiếp trên RZ/V2L ---
+  source_type: "mipi"
+  source: "/dev/video0"
+
+  # ===================================================
   width:  1920
   height: 1080
   fps:    30
-  # GStreamer pipeline tùy chỉnh (để trống thì auto-build từ source/width/height)
-  gstreamer_pipeline: ""
+  gstreamer_pipeline: ""  
 
 # ── Unified detector (single model trained for all classes) ─────────────────
 # model_type controls post-processing dispatch:

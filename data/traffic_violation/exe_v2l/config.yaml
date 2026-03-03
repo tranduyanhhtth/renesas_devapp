@@ -3,12 +3,29 @@
 ##############################################################################
 
 # -- Video input --------------------------------------------------------------
+# source_type: cách switch nguồn video (chỉ cần sửa 2 dòng source_type + source):
+#
+#   "file"   - video file MP4/AVI để test offline
+#              source: "/home/root/traffic_violation/input.mp4"
+#
+#   "mipi"   - MIPI CSI-2 camera (OV5645) trực tiếp trên RZ/V2L
+#              source: "/dev/video0"   (CRU output sau media-ctl)
+#              → tự động chạy 4 lệnh media-ctl trước khi capture
+#
 video:
-  source: "/home/root/traffic_violation/input.mp4"
+  # --- file: test với video offline ---
+  # source_type: "file"
+  # source: "/home/root/traffic_violation/input.mp4"
+
+  # --- mipi: camera MIPI CSI-2 trên RZ/V2L board ---
+  source_type: "mipi"
+  source: "/dev/video0"
+
+  # ===================================================
   width:  640
   height: 480
   fps:    20
-  gstreamer_pipeline: ""
+  gstreamer_pipeline: ""  
 
 # -- Detector -----------------------------------------------------------------
 # model_type: "yolov8"  -> anchor-free,  output [num_class+4, total_anchors]
