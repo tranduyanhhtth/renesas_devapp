@@ -108,9 +108,16 @@ AppConfig AppConfig::fromFile(const std::string& path) {
     cfg.video_height         = nodeInt  (vi["height"], 1080);
     cfg.video_fps            = nodeInt  (vi["fps"],    30);
     cfg.gstreamer_pipeline   = nodeStr  (vi["gstreamer_pipeline"]);
-    // single detector
+    // single detector (model 1)
     cfg.detector = parseDetector(fs["detector"]);
     cfg.detector.drpai_freq = nodeInt(fs["drpai"]["freq_index"], 2);
+    // optional second model (model 2: e.g. helmet detection)
+    if (!fs["detector2"].empty()) {
+        cfg.detector2_enabled = true;
+        cfg.detector2 = parseDetector(fs["detector2"]);
+        cfg.detector2.drpai_freq = cfg.detector.drpai_freq;
+        std::cout << "[Config] detector2 enabled: " << cfg.detector2.model_dir << "\n";
+    }
     // enable_lp_ocr
     cfg.enable_lp_ocr = nodeBool(fs["enable_lp_ocr"], true);
     // scene

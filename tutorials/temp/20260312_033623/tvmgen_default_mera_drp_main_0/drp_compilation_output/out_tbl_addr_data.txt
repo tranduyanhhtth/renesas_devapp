@@ -1,0 +1,7 @@
+mera_drp_0_i0                       39604480
+conv2d_2                            39758080
+mul_4                               39860480
+conv2d_7                            39962880
+maxpool2d_8                         40014080
+maxpool2d_9                         40065280
+maxpool2d_10                        40116480

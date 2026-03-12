@@ -1,0 +1,156 @@
+input_to_pre:
+  -
+    name: from_tvm_0
+    order: CHW
+    shape: [192,40,40]
+    type: fp16
+    format: RGB
+
+input_to_body:
+  -
+    name: mera_drp_40_i0
+    order: HWC
+    shape: [40,40,192]
+    type: fp16
+    format: RGB
+
+output_from_body:
+  -
+    name: conv2d_17
+    order: HWC
+    shape: [40,40,64]
+    type: fp16
+
+  -
+    name: conv2d_30
+    order: HWC
+    shape: [40,40,6]
+    type: fp16
+
+  -
+    name: mul_35
+    order: HWC
+    shape: [20,20,128]
+    type: fp16
+
+output_from_post:
+  -
+    name: to_tvm_0
+    order: CHW
+    shape: [64,40,40]
+    type: fp16
+
+  -
+    name: to_tvm_1
+    order: CHW
+    shape: [6,40,40]
+    type: fp16
+
+  -
+    name: to_tvm_2
+    order: CHW
+    shape: [128,20,20]
+    type: fp16
+
+preprocess:
+  -
+    src: [from_tvm_0]
+    dorder_in: [CHW]
+    shape_in: [[192,40,40]]
+    dtype_in: [fp16]
+
+    dest: [mera_drp_40_i0]
+    dorder_out: [HWC]
+    shape_out: [[40,40,192]]
+    dtype_out: [fp16]
+
+    operations:
+    -
+      op: transpose
+      dorder_in: [CHW]
+      shape_in: [[192,40,40]]
+      dtype_in: [fp16]
+
+      dorder_out: [HWC]
+      shape_out: [[40,40,192]]
+      dtype_out: [fp16]
+
+      param:
+        WORD_SIZE: 1
+        IS_CHW2HWC: 1
+postprocess:
+  -
+    src: [conv2d_17]
+    dorder_in: [HWC]
+    shape_in: [[40,40,64]]
+    dtype_in: [fp16]
+
+    dest: [to_tvm_0]
+    dorder_out: [CHW]
+    shape_out: [[64,40,40]]
+    dtype_out: [fp16]
+
+    operations:
+    -
+      op: transpose
+      dorder_in: [HWC]
+      shape_in: [[40,40,64]]
+      dtype_in: [fp16]
+
+      dorder_out: [CHW]
+      shape_out: [[64,40,40]]
+      dtype_out: [fp16]
+
+      param:
+        WORD_SIZE: 1
+        IS_CHW2HWC: 0
+  -
+    src: [conv2d_30]
+    dorder_in: [HWC]
+    shape_in: [[40,40,6]]
+    dtype_in: [fp16]
+
+    dest: [to_tvm_1]
+    dorder_out: [CHW]
+    shape_out: [[6,40,40]]
+    dtype_out: [fp16]
+
+    operations:
+    -
+      op: transpose
+      dorder_in: [HWC]
+      shape_in: [[40,40,6]]
+      dtype_in: [fp16]
+
+      dorder_out: [CHW]
+      shape_out: [[6,40,40]]
+      dtype_out: [fp16]
+
+      param:
+        WORD_SIZE: 1
+        IS_CHW2HWC: 0
+  -
+    src: [mul_35]
+    dorder_in: [HWC]
+    shape_in: [[20,20,128]]
+    dtype_in: [fp16]
+
+    dest: [to_tvm_2]
+    dorder_out: [CHW]
+    shape_out: [[128,20,20]]
+    dtype_out: [fp16]
+
+    operations:
+    -
+      op: transpose
+      dorder_in: [HWC]
+      shape_in: [[20,20,128]]
+      dtype_in: [fp16]
+
+      dorder_out: [CHW]
+      shape_out: [[128,20,20]]
+      dtype_out: [fp16]
+
+      param:
+        WORD_SIZE: 1
+        IS_CHW2HWC: 0

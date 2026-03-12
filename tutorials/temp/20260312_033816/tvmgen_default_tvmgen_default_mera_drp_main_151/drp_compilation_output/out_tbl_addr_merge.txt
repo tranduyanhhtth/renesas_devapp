@@ -1,0 +1,7 @@
+mera_drp_151_i0                     51984320
+conv2d_1                            52521920
+from_tvm_0                          51446720
+to_tvm_0                            52555520
+zero                                52589120
+conv2d_1_o0_k0_i0_param             52589120
+transpose.mem                       52589152     134128

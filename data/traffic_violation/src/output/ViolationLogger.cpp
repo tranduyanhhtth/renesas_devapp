@@ -82,10 +82,12 @@ void ViolationLogger::log(const ViolationEvent& ev) {
     if (m_cfg.save_full_frame || ev.frame.empty()) {
         save_frame = ev.frame.clone();
     } else {
-        // Chỉ lưu crop bbox xe
         cv::Rect safe = ev.vehicle_rect &
                         cv::Rect(0, 0, ev.frame.cols, ev.frame.rows);
-        save_frame = ev.frame(safe).clone();
+        if (safe.width > 0 && safe.height > 0)
+            save_frame = ev.frame(safe).clone();
+        else
+            save_frame = ev.frame.clone();
     }
 
     // Vẽ annotation lên frame lưu

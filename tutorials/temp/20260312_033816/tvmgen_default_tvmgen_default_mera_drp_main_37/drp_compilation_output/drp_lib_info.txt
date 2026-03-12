@@ -1,0 +1,42 @@
+7  # driver version  v0.2 
+28  # driver version >v0.3
+# transpose  [MASK : ON]
+# actfunc  [MASK : ON]
+# actfunc  [MASK : ON]
+# actfunc  [MASK : ON]
+# actfunc  [MASK : ON]
+# transpose  [MASK : ON]
+# transpose  [MASK : ON]
+# ============================
+# Address data in drp_param.bin
+# DRP LIB name[Layer Name]
+# [Start position], [Size(Byte)], [Param name], [Value]
+transpose[post_0_0_transpose]
+Start:0[Byte],Size:4[Byte],Param:raddr,Value:0x54ed440
+Start:4[Byte],Size:4[Byte],Param:waddr,Value:0x551f440
+actfunc[mul_4]
+Start:56[Byte],Size:4[Byte],Param:raddr,Value:0x5551440
+Start:60[Byte],Size:4[Byte],Param:waddr,Value:0x5583440
+Start:108[Byte],Size:4[Byte],Param:PRELU_WEIGHT_ADDR,Value:0x0
+Start:116[Byte],Size:4[Byte],Param:BNORM_ADDR,Value:0x0
+actfunc[mul_9]
+Start:120[Byte],Size:4[Byte],Param:raddr,Value:0x55b5440
+Start:124[Byte],Size:4[Byte],Param:waddr,Value:0x55e7440
+Start:172[Byte],Size:4[Byte],Param:PRELU_WEIGHT_ADDR,Value:0x0
+Start:180[Byte],Size:4[Byte],Param:BNORM_ADDR,Value:0x0
+actfunc[mul_15]
+Start:184[Byte],Size:4[Byte],Param:raddr,Value:0x5619440
+Start:188[Byte],Size:4[Byte],Param:waddr,Value:0x564b440
+Start:236[Byte],Size:4[Byte],Param:PRELU_WEIGHT_ADDR,Value:0x0
+Start:244[Byte],Size:4[Byte],Param:BNORM_ADDR,Value:0x0
+actfunc[mul_20]
+Start:248[Byte],Size:4[Byte],Param:raddr,Value:0x567d440
+Start:252[Byte],Size:4[Byte],Param:waddr,Value:0x56af440
+Start:300[Byte],Size:4[Byte],Param:PRELU_WEIGHT_ADDR,Value:0x0
+Start:308[Byte],Size:4[Byte],Param:BNORM_ADDR,Value:0x0
+transpose[post_0_0_transpose]
+Start:312[Byte],Size:4[Byte],Param:raddr,Value:0x56e1440
+Start:316[Byte],Size:4[Byte],Param:waddr,Value:0x5745440
+transpose[post_1_0_transpose]
+Start:368[Byte],Size:4[Byte],Param:raddr,Value:0x5713440
+Start:372[Byte],Size:4[Byte],Param:waddr,Value:0x5777440

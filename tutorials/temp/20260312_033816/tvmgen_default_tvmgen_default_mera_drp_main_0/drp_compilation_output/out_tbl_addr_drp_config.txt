@@ -1,0 +1,3 @@
+cast_fp16_fp32.mem                  69219072     101648
+transpose.mem                       69320720     134128
+actfunc.mem                         69454848     174860

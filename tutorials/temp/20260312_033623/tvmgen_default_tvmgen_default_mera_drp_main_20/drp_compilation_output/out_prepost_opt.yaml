@@ -1,0 +1,173 @@
+input_to_pre:
+- name: from_tvm_0
+  shape:
+  - 32
+  - 80
+  - 80
+  order: CHW
+  format: RGB
+  type: fp16
+input_to_body:
+- name: mera_drp_20_i0
+  shape:
+  - 80
+  - 80
+  - 32
+  order: HWC
+  format: RGB
+  type: fp16
+output_from_body:
+- name: add_10
+  shape:
+  - 80
+  - 80
+  - 32
+  order: HWC
+  type: fp16
+- name: add_21
+  shape:
+  - 80
+  - 80
+  - 32
+  order: HWC
+  type: fp16
+output_from_post:
+- name: to_tvm_0
+  shape:
+  - 32
+  - 80
+  - 80
+  order: CHW
+  type: fp16
+- name: to_tvm_1
+  shape:
+  - 32
+  - 80
+  - 80
+  order: CHW
+  type: fp16
+preprocess:
+- src:
+  - from_tvm_0
+  shape_in:
+  - - 32
+    - 80
+    - 80
+  dtype_in:
+  - fp16
+  dorder_in:
+  - CHW
+  dest:
+  - mera_drp_20_i0
+  shape_out:
+  - - 80
+    - 80
+    - 32
+  dtype_out:
+  - fp16
+  dorder_out:
+  - HWC
+  operations:
+  - op: transpose
+    shape_in:
+    - - 32
+      - 80
+      - 80
+    dtype_in:
+    - fp16
+    dorder_in:
+    - CHW
+    shape_out:
+    - - 80
+      - 80
+      - 32
+    dtype_out:
+    - fp16
+    dorder_out:
+    - HWC
+    param:
+      WORD_SIZE: 1
+      IS_CHW2HWC: 1
+postprocess:
+- src:
+  - add_10
+  shape_in:
+  - - 80
+    - 80
+    - 32
+  dtype_in:
+  - fp16
+  dorder_in:
+  - HWC
+  dest:
+  - to_tvm_0
+  shape_out:
+  - - 32
+    - 80
+    - 80
+  dtype_out:
+  - fp16
+  dorder_out:
+  - CHW
+  operations:
+  - op: transpose
+    shape_in:
+    - - 80
+      - 80
+      - 32
+    dtype_in:
+    - fp16
+    dorder_in:
+    - HWC
+    shape_out:
+    - - 32
+      - 80
+      - 80
+    dtype_out:
+    - fp16
+    dorder_out:
+    - CHW
+    param:
+      WORD_SIZE: 1
+      IS_CHW2HWC: 0
+- src:
+  - add_21
+  shape_in:
+  - - 80
+    - 80
+    - 32
+  dtype_in:
+  - fp16
+  dorder_in:
+  - HWC
+  dest:
+  - to_tvm_1
+  shape_out:
+  - - 32
+    - 80
+    - 80
+  dtype_out:
+  - fp16
+  dorder_out:
+  - CHW
+  operations:
+  - op: transpose
+    shape_in:
+    - - 80
+      - 80
+      - 32
+    dtype_in:
+    - fp16
+    dorder_in:
+    - HWC
+    shape_out:
+    - - 32
+      - 80
+      - 80
+    dtype_out:
+    - fp16
+    dorder_out:
+    - CHW
+    param:
+      WORD_SIZE: 1
+      IS_CHW2HWC: 0

@@ -1,0 +1,9 @@
+mera_drp_37_i0                      20290048
+conv2d_2                            20597248
+mul_4                               20802048
+from_tvm_0                          19982848
+to_tvm_0                            21006848
+zero                                21211648
+conv2d_2_o0_k0_i0_param             21211648
+transpose.mem                       21236352     134128
+actfunc.mem                         21370480     174860

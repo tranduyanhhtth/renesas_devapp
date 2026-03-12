@@ -1,0 +1,441 @@
+{
+    "0_o0_k0_i0": {
+        "name": "post_0_0_transpose",
+        "opexp": "transpose",
+        "Calc": {
+            "name": "transpose",
+            "mode": "FP",
+            "is_drp": true,
+            "is_op": true,
+            "is_op_bias": false,
+            "is_add1": false,
+            "is_bnorm": false,
+            "is_add2": false,
+            "is_divide_1x1": "",
+            "activation": {
+                "name": "",
+                "param_prelu": ""
+            }
+        },
+        "Divide": {
+            "idx_och": -1,
+            "idx_ker": -1,
+            "idx_ich": -1,
+            "num_och_div": -1,
+            "num_ker_div": -1,
+            "num_ich_div": -1
+        },
+        "Kernel": {
+            "w": -1,
+            "h": -1,
+            "div_w": -1,
+            "div_h": -1,
+            "i_col_ker": "",
+            "i_row_ker": 0,
+            "st": -1,
+            "dil": "",
+            "pad": {
+                "l": 0,
+                "r": 0,
+                "t": 0,
+                "b": 0
+            }
+        },
+        "Parallel": {
+            "och": 1,
+            "col": 1,
+            "row": 1
+        },
+        "ParaUser": {
+            "och": -1,
+            "col": -1,
+            "row": -1
+        },
+        "Data": {
+            "ich_org": 1,
+            "ich": 1,
+            "din_h": 2,
+            "din_w": 8400,
+            "och_org": 1,
+            "och": 1,
+            "dout_h": 2,
+            "dout_w": 8400
+        },
+        "Addr": {
+            "din": "from_tvm_0",
+            "din_offset": 0,
+            "param": "",
+            "dout": "mera_drp_153_i0",
+            "dout_offset": 0,
+            "add1": "",
+            "add1_offset": 0,
+            "add2": "",
+            "add2_offset": 0,
+            "is_work_add1": false,
+            "is_work_add2": false,
+            "is_work_dout": false
+        },
+        "Hw": {
+            "pram_depth_mag": "",
+            "tbl_mac_to_ker_y": "",
+            "tbl_mac_to_para_och": "",
+            "tbl_mac_to_para_col": "",
+            "tbl_mac_to_para_row": "",
+            "tbl_mac_to_ch_din": "",
+            "tbl_mac_to_ch_din_intm": "",
+            "tbl_mac_to_ch_dout": "",
+            "mode_din_intm": "",
+            "mode_dout": ""
+        },
+        "Param": {
+            "WORD_SIZE": 1,
+            "IS_CHW2HWC": 1
+        }
+    },
+    "1_o0_k0_i0": {
+        "name": "post_1_0_transpose",
+        "opexp": "transpose",
+        "Calc": {
+            "name": "transpose",
+            "mode": "FP",
+            "is_drp": true,
+            "is_op": true,
+            "is_op_bias": false,
+            "is_add1": false,
+            "is_bnorm": false,
+            "is_add2": false,
+            "is_divide_1x1": "",
+            "activation": {
+                "name": "",
+                "param_prelu": ""
+            }
+        },
+        "Divide": {
+            "idx_och": -1,
+            "idx_ker": -1,
+            "idx_ich": -1,
+            "num_och_div": -1,
+            "num_ker_div": -1,
+            "num_ich_div": -1
+        },
+        "Kernel": {
+            "w": -1,
+            "h": -1,
+            "div_w": -1,
+            "div_h": -1,
+            "i_col_ker": "",
+            "i_row_ker": 0,
+            "st": -1,
+            "dil": "",
+            "pad": {
+                "l": 0,
+                "r": 0,
+                "t": 0,
+                "b": 0
+            }
+        },
+        "Parallel": {
+            "och": 1,
+            "col": 1,
+            "row": 1
+        },
+        "ParaUser": {
+            "och": -1,
+            "col": -1,
+            "row": -1
+        },
+        "Data": {
+            "ich_org": 1,
+            "ich": 1,
+            "din_h": 2,
+            "din_w": 8400,
+            "och_org": 1,
+            "och": 1,
+            "dout_h": 2,
+            "dout_w": 8400
+        },
+        "Addr": {
+            "din": "from_tvm_1",
+            "din_offset": 0,
+            "param": "",
+            "dout": "mera_drp_153_i1",
+            "dout_offset": 0,
+            "add1": "",
+            "add1_offset": 0,
+            "add2": "",
+            "add2_offset": 0,
+            "is_work_add1": false,
+            "is_work_add2": false,
+            "is_work_dout": false
+        },
+        "Hw": {
+            "pram_depth_mag": "",
+            "tbl_mac_to_ker_y": "",
+            "tbl_mac_to_para_och": "",
+            "tbl_mac_to_para_col": "",
+            "tbl_mac_to_para_row": "",
+            "tbl_mac_to_ch_din": "",
+            "tbl_mac_to_ch_din_intm": "",
+            "tbl_mac_to_ch_dout": "",
+            "mode_din_intm": "",
+            "mode_dout": ""
+        },
+        "Param": {
+            "WORD_SIZE": 1,
+            "IS_CHW2HWC": 1
+        }
+    },
+    "2_o0_k0_i0": {
+        "name": "add_0_o0_k0_i0",
+        "opexp": "Add",
+        "Calc": {
+            "name": "",
+            "mode": "FP",
+            "is_drp": false,
+            "is_op": false,
+            "is_op_bias": false,
+            "is_add1": true,
+            "is_bnorm": false,
+            "is_add2": false,
+            "is_divide_1x1": false,
+            "activation": {
+                "name": "passthr",
+                "param_prelu": -1.0
+            }
+        },
+        "Divide": {
+            "idx_och": 0,
+            "idx_ker": 0,
+            "idx_ich": 0,
+            "num_och_div": 1,
+            "num_ker_div": 1,
+            "num_ich_div": 1
+        },
+        "Kernel": {
+            "w": 1,
+            "h": 1,
+            "div_w": 1,
+            "div_h": 1,
+            "i_col_ker": 0,
+            "i_row_ker": 0,
+            "st": 1,
+            "dil": -1,
+            "pad": {
+                "l": 0,
+                "r": 0,
+                "t": 0,
+                "b": 0
+            }
+        },
+        "Parallel": {
+            "och": 1,
+            "col": 1,
+            "row": 4
+        },
+        "ParaUser": {
+            "och": -1,
+            "col": -1,
+            "row": -1
+        },
+        "Data": {
+            "ich_org": 1,
+            "ich": 1,
+            "din_h": 2,
+            "din_w": 8400,
+            "och_org": 1,
+            "och": 1,
+            "dout_h": 2,
+            "dout_w": 8400
+        },
+        "Addr": {
+            "din": "mera_drp_153_i0",
+            "din_offset": 0,
+            "param": "",
+            "dout": "add_0",
+            "dout_offset": 0,
+            "add1": "mera_drp_153_i1",
+            "add1_offset": 0,
+            "add2": "",
+            "add2_offset": 0,
+            "is_work_add1": false,
+            "is_work_add2": false,
+            "is_work_dout": false
+        },
+        "Hw": {
+            "pram_depth_mag": 9,
+            "tbl_mac_to_ker_y": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                -1
+            ],
+            "tbl_mac_to_para_och": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                -1
+            ],
+            "tbl_mac_to_para_col": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                -1
+            ],
+            "tbl_mac_to_para_row": [
+                0,
+                0,
+                1,
+                1,
+                2,
+                2,
+                3,
+                3,
+                -1
+            ],
+            "tbl_mac_to_ch_din": [
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1
+            ],
+            "tbl_mac_to_ch_din_intm": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                -1
+            ],
+            "tbl_mac_to_ch_dout": [
+                -1,
+                0,
+                -1,
+                1,
+                -1,
+                2,
+                -1,
+                3,
+                -1
+            ],
+            "mode_din_intm": "Para",
+            "mode_dout": "Para"
+        },
+        "Param": {}
+    },
+    "3_o0_k0_i0": {
+        "name": "post_0_0_transpose",
+        "opexp": "transpose",
+        "Calc": {
+            "name": "transpose",
+            "mode": "FP",
+            "is_drp": true,
+            "is_op": true,
+            "is_op_bias": false,
+            "is_add1": false,
+            "is_bnorm": false,
+            "is_add2": false,
+            "is_divide_1x1": "",
+            "activation": {
+                "name": "",
+                "param_prelu": ""
+            }
+        },
+        "Divide": {
+            "idx_och": -1,
+            "idx_ker": -1,
+            "idx_ich": -1,
+            "num_och_div": -1,
+            "num_ker_div": -1,
+            "num_ich_div": -1
+        },
+        "Kernel": {
+            "w": -1,
+            "h": -1,
+            "div_w": -1,
+            "div_h": -1,
+            "i_col_ker": "",
+            "i_row_ker": 0,
+            "st": -1,
+            "dil": "",
+            "pad": {
+                "l": 0,
+                "r": 0,
+                "t": 0,
+                "b": 0
+            }
+        },
+        "Parallel": {
+            "och": 1,
+            "col": 1,
+            "row": 1
+        },
+        "ParaUser": {
+            "och": -1,
+            "col": -1,
+            "row": -1
+        },
+        "Data": {
+            "ich_org": 1,
+            "ich": 1,
+            "din_h": 2,
+            "din_w": 8400,
+            "och_org": 1,
+            "och": 1,
+            "dout_h": 2,
+            "dout_w": 8400
+        },
+        "Addr": {
+            "din": "add_0",
+            "din_offset": 0,
+            "param": "",
+            "dout": "to_tvm_0",
+            "dout_offset": 0,
+            "add1": "",
+            "add1_offset": 0,
+            "add2": "",
+            "add2_offset": 0,
+            "is_work_add1": false,
+            "is_work_add2": false,
+            "is_work_dout": false
+        },
+        "Hw": {
+            "pram_depth_mag": "",
+            "tbl_mac_to_ker_y": "",
+            "tbl_mac_to_para_och": "",
+            "tbl_mac_to_para_col": "",
+            "tbl_mac_to_para_row": "",
+            "tbl_mac_to_ch_din": "",
+            "tbl_mac_to_ch_din_intm": "",
+            "tbl_mac_to_ch_dout": "",
+            "mode_din_intm": "",
+            "mode_dout": ""
+        },
+        "Param": {
+            "WORD_SIZE": 1,
+            "IS_CHW2HWC": 0
+        }
+    }
+}

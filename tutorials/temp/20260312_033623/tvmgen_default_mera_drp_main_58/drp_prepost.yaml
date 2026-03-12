@@ -1,0 +1,82 @@
+input_to_pre:
+  -
+    name: from_tvm_0
+    order: CHW
+    shape: [384,20,20]
+    type: fp16
+    format: RGB
+
+input_to_body:
+  -
+    name: mera_drp_58_i0
+    order: HWC
+    shape: [20,20,384]
+    type: fp16
+    format: RGB
+
+output_from_body:
+  -
+    name: mul_4
+    order: HWC
+    shape: [20,20,256]
+    type: fp16
+
+output_from_post:
+  -
+    name: to_tvm_0
+    order: CHW
+    shape: [256,20,20]
+    type: fp16
+
+preprocess:
+  -
+    src: [from_tvm_0]
+    dorder_in: [CHW]
+    shape_in: [[384,20,20]]
+    dtype_in: [fp16]
+
+    dest: [mera_drp_58_i0]
+    dorder_out: [HWC]
+    shape_out: [[20,20,384]]
+    dtype_out: [fp16]
+
+    operations:
+    -
+      op: transpose
+      dorder_in: [CHW]
+      shape_in: [[384,20,20]]
+      dtype_in: [fp16]
+
+      dorder_out: [HWC]
+      shape_out: [[20,20,384]]
+      dtype_out: [fp16]
+
+      param:
+        WORD_SIZE: 1
+        IS_CHW2HWC: 1
+postprocess:
+  -
+    src: [mul_4]
+    dorder_in: [HWC]
+    shape_in: [[20,20,256]]
+    dtype_in: [fp16]
+
+    dest: [to_tvm_0]
+    dorder_out: [CHW]
+    shape_out: [[256,20,20]]
+    dtype_out: [fp16]
+
+    operations:
+    -
+      op: transpose
+      dorder_in: [HWC]
+      shape_in: [[20,20,256]]
+      dtype_in: [fp16]
+
+      dorder_out: [CHW]
+      shape_out: [[256,20,20]]
+      dtype_out: [fp16]
+
+      param:
+        WORD_SIZE: 1
+        IS_CHW2HWC: 0

@@ -19,16 +19,16 @@
 /* Source type – xác định GStreamer pipeline sẽ được build */
 enum class SourceType {
     FILE,    /* video file                               */
-    USB,     /* USB camera – v4l2src /dev/videoN         */
+    USB,     /* USB camera qua v4l2src                   */
     MIPI,    /* MIPI CSI-2 – media-ctl init + v4l2src    */
-    RTSP,    /* rtsp://...                               */
-    CUSTOM   /* gstreamer_pipeline được dùng nguyên xi   */
+    RTSP,    /* RTSP network stream                      */
+    CUSTOM,  /* dùng nguyên gstreamer_pipeline từ config  */
 };
 
-/* Convert string → SourceType ("file", "usb", "mipi", "rtsp", "custom") */
+/* Convert string → SourceType */
 inline SourceType sourceTypeFromString(const std::string& s) {
-    if (s == "usb")    return SourceType::USB;
     if (s == "mipi")   return SourceType::MIPI;
+    if (s == "usb")    return SourceType::USB;
     if (s == "rtsp")   return SourceType::RTSP;
     if (s == "custom") return SourceType::CUSTOM;
     return SourceType::FILE;   /* default */

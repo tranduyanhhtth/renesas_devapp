@@ -12,9 +12,9 @@
 #   "mipi"       |  /dev/video0                      |  MIPI CSI-2 trên RZ/V2L
 #                |                                   |  (tự chạy media-ctl init)
 video:
-  # --- file: chạy thử với video offline (host x86 hoặc board) ---
+  # --- file: chạy thử với video offline ---
   # source_type: "file"
-  # source: "sample_intersection.mp4"
+  # source: "CarsDrivingUnderBridge.mp4"
 
   # --- mipi: camera MIPI trực tiếp trên RZ/V2L ---
   source_type: "mipi"
@@ -63,7 +63,7 @@ detector:
   model_type:   "yolov8"
   model_dir:    "models/yolov8n_onnx"
   pre_dir:      "models/yolov8n_onnx/preprocess"
-  label_file:   "models/yolov8n_onnx/coco-labels-2014_2017.txt"
+  label_file:   "models/yolov8n_onnx/label.txt"
   input_width:  640
   input_height: 640
   drpai_freq:   2

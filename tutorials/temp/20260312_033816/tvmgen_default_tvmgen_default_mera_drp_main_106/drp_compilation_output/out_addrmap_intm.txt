@@ -1,0 +1,9 @@
+data_in c5ca80 32000
+data c8ea80 fa000
+data_out d88a80 32000
+work dbaa80 0
+weight dbaa80 24300
+drp_config dded80 96e00
+drp_param e75b80 f0
+desc_aimac e75c80 850
+desc_drp e76500 130

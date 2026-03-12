@@ -1,0 +1,7 @@
+conv2d_2_o0_k0_i0_param               772800
+conv2d_7_o0_k0_i0_param               871360
+conv2d_12_o0_k0_i0_param             1019008
+conv2d_17_o0_k0_i0_param             1056064
+conv2d_20_o0_k0_i0_param             1060224
+conv2d_25_o0_k0_i0_param             1207872
+conv2d_30_o0_k0_i0_param             1244928

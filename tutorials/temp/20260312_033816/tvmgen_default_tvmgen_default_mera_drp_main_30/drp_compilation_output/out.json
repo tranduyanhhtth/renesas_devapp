@@ -1,0 +1,1197 @@
+{
+    "0_o0_k0_i0": {
+        "name": "post_0_0_transpose",
+        "opexp": "transpose",
+        "Calc": {
+            "name": "transpose",
+            "mode": "FP",
+            "is_drp": true,
+            "is_op": true,
+            "is_op_bias": false,
+            "is_add1": false,
+            "is_bnorm": false,
+            "is_add2": false,
+            "is_divide_1x1": "",
+            "activation": {
+                "name": "",
+                "param_prelu": ""
+            }
+        },
+        "Divide": {
+            "idx_och": -1,
+            "idx_ker": -1,
+            "idx_ich": -1,
+            "num_och_div": -1,
+            "num_ker_div": -1,
+            "num_ich_div": -1
+        },
+        "Kernel": {
+            "w": -1,
+            "h": -1,
+            "div_w": -1,
+            "div_h": -1,
+            "i_col_ker": "",
+            "i_row_ker": 0,
+            "st": -1,
+            "dil": "",
+            "pad": {
+                "l": 0,
+                "r": 0,
+                "t": 0,
+                "b": 0
+            }
+        },
+        "Parallel": {
+            "och": 1,
+            "col": 1,
+            "row": 1
+        },
+        "ParaUser": {
+            "och": -1,
+            "col": -1,
+            "row": -1
+        },
+        "Data": {
+            "ich_org": 128,
+            "ich": 128,
+            "din_h": 80,
+            "din_w": 80,
+            "och_org": 128,
+            "och": 128,
+            "dout_h": 80,
+            "dout_w": 80
+        },
+        "Addr": {
+            "din": "from_tvm_0",
+            "din_offset": 0,
+            "param": "",
+            "dout": "mera_drp_30_i0",
+            "dout_offset": 0,
+            "add1": "",
+            "add1_offset": 0,
+            "add2": "",
+            "add2_offset": 0,
+            "is_work_add1": false,
+            "is_work_add2": false,
+            "is_work_dout": false
+        },
+        "Hw": {
+            "pram_depth_mag": "",
+            "tbl_mac_to_ker_y": "",
+            "tbl_mac_to_para_och": "",
+            "tbl_mac_to_para_col": "",
+            "tbl_mac_to_para_row": "",
+            "tbl_mac_to_ch_din": "",
+            "tbl_mac_to_ch_din_intm": "",
+            "tbl_mac_to_ch_dout": "",
+            "mode_din_intm": "",
+            "mode_dout": ""
+        },
+        "Param": {
+            "WORD_SIZE": 1,
+            "IS_CHW2HWC": 1
+        }
+    },
+    "1_o0_k0_i0": {
+        "name": "conv2d_2_o0_k0_i0",
+        "opexp": "Conv",
+        "Calc": {
+            "name": "Conv",
+            "mode": "FP",
+            "is_drp": false,
+            "is_op": true,
+            "is_op_bias": true,
+            "is_add1": false,
+            "is_bnorm": false,
+            "is_add2": false,
+            "is_divide_1x1": false,
+            "activation": {
+                "name": "passthr",
+                "param_prelu": -1.0
+            }
+        },
+        "Divide": {
+            "idx_och": 0,
+            "idx_ker": 0,
+            "idx_ich": 0,
+            "num_och_div": 1,
+            "num_ker_div": 1,
+            "num_ich_div": 1
+        },
+        "Kernel": {
+            "w": 1,
+            "h": 1,
+            "div_w": 1,
+            "div_h": 1,
+            "i_col_ker": 0,
+            "i_row_ker": 0,
+            "st": 1,
+            "dil": 1,
+            "pad": {
+                "l": 0,
+                "r": 0,
+                "t": 0,
+                "b": 0
+            }
+        },
+        "Parallel": {
+            "och": 1,
+            "col": 1,
+            "row": 8
+        },
+        "ParaUser": {
+            "och": -1,
+            "col": -1,
+            "row": -1
+        },
+        "Data": {
+            "ich_org": 128,
+            "ich": 128,
+            "din_h": 80,
+            "din_w": 80,
+            "och_org": 64,
+            "och": 64,
+            "dout_h": 80,
+            "dout_w": 80
+        },
+        "Addr": {
+            "din": "mera_drp_30_i0",
+            "din_offset": 0,
+            "param": "conv2d_2_o0_k0_i0_param",
+            "dout": "conv2d_2",
+            "dout_offset": 0,
+            "add1": "",
+            "add1_offset": 0,
+            "add2": "",
+            "add2_offset": 0,
+            "is_work_add1": false,
+            "is_work_add2": false,
+            "is_work_dout": false
+        },
+        "Hw": {
+            "pram_depth_mag": 9,
+            "tbl_mac_to_ker_y": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                -1
+            ],
+            "tbl_mac_to_para_och": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                -1
+            ],
+            "tbl_mac_to_para_col": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                -1
+            ],
+            "tbl_mac_to_para_row": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                -1
+            ],
+            "tbl_mac_to_ch_din": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                -1
+            ],
+            "tbl_mac_to_ch_din_intm": [
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1
+            ],
+            "tbl_mac_to_ch_dout": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                -1
+            ],
+            "mode_din_intm": "Para",
+            "mode_dout": "Para"
+        },
+        "Param": {}
+    },
+    "2_o0_k0_i0": {
+        "name": "mul_4",
+        "opexp": "Swish",
+        "Calc": {
+            "name": "actfunc",
+            "mode": "FP",
+            "is_drp": true,
+            "is_op": true,
+            "is_op_bias": false,
+            "is_add1": false,
+            "is_bnorm": false,
+            "is_add2": false,
+            "is_divide_1x1": false,
+            "activation": {
+                "name": "passthr",
+                "param_prelu": -1.0
+            }
+        },
+        "Divide": {
+            "idx_och": 0,
+            "idx_ker": 0,
+            "idx_ich": 0,
+            "num_och_div": 1,
+            "num_ker_div": 1,
+            "num_ich_div": 1
+        },
+        "Kernel": {
+            "w": -1,
+            "h": -1,
+            "div_w": -1,
+            "div_h": -1,
+            "i_col_ker": -1,
+            "i_row_ker": -1,
+            "st": -1,
+            "dil": -1,
+            "pad": {
+                "l": 0,
+                "r": 0,
+                "t": 0,
+                "b": 0
+            }
+        },
+        "Parallel": {
+            "och": 1,
+            "col": 1,
+            "row": 1
+        },
+        "ParaUser": {
+            "och": -1,
+            "col": -1,
+            "row": -1
+        },
+        "Data": {
+            "ich_org": 64,
+            "ich": 64,
+            "din_h": 80,
+            "din_w": 80,
+            "och_org": 64,
+            "och": 64,
+            "dout_h": 80,
+            "dout_w": 80
+        },
+        "Addr": {
+            "din": "conv2d_2",
+            "din_offset": 0,
+            "param": "",
+            "dout": "mul_4",
+            "dout_offset": 0,
+            "add1": "",
+            "add1_offset": 0,
+            "add2": "",
+            "add2_offset": 0,
+            "is_work_add1": false,
+            "is_work_add2": false,
+            "is_work_dout": false
+        },
+        "Hw": {
+            "pram_depth_mag": "",
+            "tbl_mac_to_ker_y": "",
+            "tbl_mac_to_para_och": "",
+            "tbl_mac_to_para_col": "",
+            "tbl_mac_to_para_row": "",
+            "tbl_mac_to_ch_din": "",
+            "tbl_mac_to_ch_din_intm": "",
+            "tbl_mac_to_ch_dout": "",
+            "mode_din_intm": "",
+            "mode_dout": ""
+        },
+        "Param": {
+            "ACTFUNC_TYPE": 4
+        }
+    },
+    "3_o0_k0_i0": {
+        "name": "conv2d_7_o0_k0_i0",
+        "opexp": "Conv",
+        "Calc": {
+            "name": "Conv",
+            "mode": "FP",
+            "is_drp": false,
+            "is_op": true,
+            "is_op_bias": true,
+            "is_add1": false,
+            "is_bnorm": false,
+            "is_add2": false,
+            "is_divide_1x1": false,
+            "activation": {
+                "name": "passthr",
+                "param_prelu": -1.0
+            }
+        },
+        "Divide": {
+            "idx_och": 0,
+            "idx_ker": 0,
+            "idx_ich": 0,
+            "num_och_div": 2,
+            "num_ker_div": 1,
+            "num_ich_div": 1
+        },
+        "Kernel": {
+            "w": 3,
+            "h": 3,
+            "div_w": 3,
+            "div_h": 3,
+            "i_col_ker": 0,
+            "i_row_ker": 0,
+            "st": 2,
+            "dil": 1,
+            "pad": {
+                "l": 1,
+                "r": 1,
+                "t": 1,
+                "b": 1
+            }
+        },
+        "Parallel": {
+            "och": 1,
+            "col": 1,
+            "row": 3
+        },
+        "ParaUser": {
+            "och": -1,
+            "col": -1,
+            "row": -1
+        },
+        "Data": {
+            "ich_org": 64,
+            "ich": 64,
+            "din_h": 80,
+            "din_w": 80,
+            "och_org": 128,
+            "och": 64,
+            "dout_h": 40,
+            "dout_w": 40
+        },
+        "Addr": {
+            "din": "mul_4",
+            "din_offset": 0,
+            "param": "conv2d_7_o0_k0_i0_param",
+            "dout": "conv2d_7",
+            "dout_offset": 0,
+            "add1": "",
+            "add1_offset": 0,
+            "add2": "",
+            "add2_offset": 0,
+            "is_work_add1": false,
+            "is_work_add2": false,
+            "is_work_dout": false
+        },
+        "Hw": {
+            "pram_depth_mag": 3,
+            "tbl_mac_to_ker_y": [
+                0,
+                1,
+                2,
+                0,
+                1,
+                2,
+                0,
+                1,
+                2
+            ],
+            "tbl_mac_to_para_och": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+            ],
+            "tbl_mac_to_para_col": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+            ],
+            "tbl_mac_to_para_row": [
+                0,
+                0,
+                0,
+                1,
+                1,
+                1,
+                2,
+                2,
+                2
+            ],
+            "tbl_mac_to_ch_din": [
+                0,
+                1,
+                2,
+                2,
+                3,
+                4,
+                4,
+                5,
+                6
+            ],
+            "tbl_mac_to_ch_din_intm": [
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1
+            ],
+            "tbl_mac_to_ch_dout": [
+                -1,
+                -1,
+                0,
+                -1,
+                -1,
+                1,
+                -1,
+                -1,
+                2
+            ],
+            "mode_din_intm": "Para",
+            "mode_dout": "Para"
+        },
+        "Param": {}
+    },
+    "3_o1_k0_i0": {
+        "name": "conv2d_7_o1_k0_i0",
+        "opexp": "Conv",
+        "Calc": {
+            "name": "Conv",
+            "mode": "FP",
+            "is_drp": false,
+            "is_op": true,
+            "is_op_bias": true,
+            "is_add1": false,
+            "is_bnorm": false,
+            "is_add2": false,
+            "is_divide_1x1": false,
+            "activation": {
+                "name": "passthr",
+                "param_prelu": -1.0
+            }
+        },
+        "Divide": {
+            "idx_och": 1,
+            "idx_ker": 0,
+            "idx_ich": 0,
+            "num_och_div": 2,
+            "num_ker_div": 1,
+            "num_ich_div": 1
+        },
+        "Kernel": {
+            "w": 3,
+            "h": 3,
+            "div_w": 3,
+            "div_h": 3,
+            "i_col_ker": 0,
+            "i_row_ker": 0,
+            "st": 2,
+            "dil": 1,
+            "pad": {
+                "l": 1,
+                "r": 1,
+                "t": 1,
+                "b": 1
+            }
+        },
+        "Parallel": {
+            "och": 1,
+            "col": 1,
+            "row": 3
+        },
+        "ParaUser": {
+            "och": -1,
+            "col": -1,
+            "row": -1
+        },
+        "Data": {
+            "ich_org": 64,
+            "ich": 64,
+            "din_h": 80,
+            "din_w": 80,
+            "och_org": 128,
+            "och": 64,
+            "dout_h": 40,
+            "dout_w": 40
+        },
+        "Addr": {
+            "din": "mul_4",
+            "din_offset": 0,
+            "param": "conv2d_7_o1_k0_i0_param",
+            "dout": "conv2d_7",
+            "dout_offset": 64,
+            "add1": "",
+            "add1_offset": 0,
+            "add2": "",
+            "add2_offset": 0,
+            "is_work_add1": false,
+            "is_work_add2": false,
+            "is_work_dout": false
+        },
+        "Hw": {
+            "pram_depth_mag": 3,
+            "tbl_mac_to_ker_y": [
+                0,
+                1,
+                2,
+                0,
+                1,
+                2,
+                0,
+                1,
+                2
+            ],
+            "tbl_mac_to_para_och": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+            ],
+            "tbl_mac_to_para_col": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+            ],
+            "tbl_mac_to_para_row": [
+                0,
+                0,
+                0,
+                1,
+                1,
+                1,
+                2,
+                2,
+                2
+            ],
+            "tbl_mac_to_ch_din": [
+                0,
+                1,
+                2,
+                2,
+                3,
+                4,
+                4,
+                5,
+                6
+            ],
+            "tbl_mac_to_ch_din_intm": [
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1
+            ],
+            "tbl_mac_to_ch_dout": [
+                -1,
+                -1,
+                0,
+                -1,
+                -1,
+                1,
+                -1,
+                -1,
+                2
+            ],
+            "mode_din_intm": "Para",
+            "mode_dout": "Para"
+        },
+        "Param": {}
+    },
+    "4_o0_k0_i0": {
+        "name": "mul_9",
+        "opexp": "Swish",
+        "Calc": {
+            "name": "actfunc",
+            "mode": "FP",
+            "is_drp": true,
+            "is_op": true,
+            "is_op_bias": false,
+            "is_add1": false,
+            "is_bnorm": false,
+            "is_add2": false,
+            "is_divide_1x1": false,
+            "activation": {
+                "name": "passthr",
+                "param_prelu": -1.0
+            }
+        },
+        "Divide": {
+            "idx_och": 0,
+            "idx_ker": 0,
+            "idx_ich": 0,
+            "num_och_div": 1,
+            "num_ker_div": 1,
+            "num_ich_div": 1
+        },
+        "Kernel": {
+            "w": -1,
+            "h": -1,
+            "div_w": -1,
+            "div_h": -1,
+            "i_col_ker": -1,
+            "i_row_ker": -1,
+            "st": -1,
+            "dil": -1,
+            "pad": {
+                "l": 0,
+                "r": 0,
+                "t": 0,
+                "b": 0
+            }
+        },
+        "Parallel": {
+            "och": 1,
+            "col": 1,
+            "row": 1
+        },
+        "ParaUser": {
+            "och": -1,
+            "col": -1,
+            "row": -1
+        },
+        "Data": {
+            "ich_org": 128,
+            "ich": 128,
+            "din_h": 40,
+            "din_w": 40,
+            "och_org": 128,
+            "och": 128,
+            "dout_h": 40,
+            "dout_w": 40
+        },
+        "Addr": {
+            "din": "conv2d_7",
+            "din_offset": 0,
+            "param": "",
+            "dout": "mul_9",
+            "dout_offset": 0,
+            "add1": "",
+            "add1_offset": 0,
+            "add2": "",
+            "add2_offset": 0,
+            "is_work_add1": false,
+            "is_work_add2": false,
+            "is_work_dout": false
+        },
+        "Hw": {
+            "pram_depth_mag": "",
+            "tbl_mac_to_ker_y": "",
+            "tbl_mac_to_para_och": "",
+            "tbl_mac_to_para_col": "",
+            "tbl_mac_to_para_row": "",
+            "tbl_mac_to_ch_din": "",
+            "tbl_mac_to_ch_din_intm": "",
+            "tbl_mac_to_ch_dout": "",
+            "mode_din_intm": "",
+            "mode_dout": ""
+        },
+        "Param": {
+            "ACTFUNC_TYPE": 4
+        }
+    },
+    "5_o0_k0_i0": {
+        "name": "conv2d_12_o0_k0_i0",
+        "opexp": "Conv",
+        "Calc": {
+            "name": "Conv",
+            "mode": "FP",
+            "is_drp": false,
+            "is_op": true,
+            "is_op_bias": true,
+            "is_add1": false,
+            "is_bnorm": false,
+            "is_add2": false,
+            "is_divide_1x1": false,
+            "activation": {
+                "name": "passthr",
+                "param_prelu": -1.0
+            }
+        },
+        "Divide": {
+            "idx_och": 0,
+            "idx_ker": 0,
+            "idx_ich": 0,
+            "num_och_div": 1,
+            "num_ker_div": 1,
+            "num_ich_div": 1
+        },
+        "Kernel": {
+            "w": 1,
+            "h": 1,
+            "div_w": 1,
+            "div_h": 1,
+            "i_col_ker": 0,
+            "i_row_ker": 0,
+            "st": 1,
+            "dil": 1,
+            "pad": {
+                "l": 0,
+                "r": 0,
+                "t": 0,
+                "b": 0
+            }
+        },
+        "Parallel": {
+            "och": 2,
+            "col": 1,
+            "row": 4
+        },
+        "ParaUser": {
+            "och": -1,
+            "col": -1,
+            "row": -1
+        },
+        "Data": {
+            "ich_org": 128,
+            "ich": 128,
+            "din_h": 40,
+            "din_w": 40,
+            "och_org": 128,
+            "och": 128,
+            "dout_h": 40,
+            "dout_w": 40
+        },
+        "Addr": {
+            "din": "mul_9",
+            "din_offset": 0,
+            "param": "conv2d_12_o0_k0_i0_param",
+            "dout": "conv2d_12",
+            "dout_offset": 0,
+            "add1": "",
+            "add1_offset": 0,
+            "add2": "",
+            "add2_offset": 0,
+            "is_work_add1": false,
+            "is_work_add2": false,
+            "is_work_dout": false
+        },
+        "Hw": {
+            "pram_depth_mag": 4,
+            "tbl_mac_to_ker_y": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                -1
+            ],
+            "tbl_mac_to_para_och": [
+                0,
+                1,
+                0,
+                1,
+                0,
+                1,
+                0,
+                1,
+                -1
+            ],
+            "tbl_mac_to_para_col": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                -1
+            ],
+            "tbl_mac_to_para_row": [
+                0,
+                0,
+                1,
+                1,
+                2,
+                2,
+                3,
+                3,
+                -1
+            ],
+            "tbl_mac_to_ch_din": [
+                0,
+                0,
+                1,
+                1,
+                2,
+                2,
+                3,
+                3,
+                -1
+            ],
+            "tbl_mac_to_ch_din_intm": [
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1
+            ],
+            "tbl_mac_to_ch_dout": [
+                0,
+                0,
+                1,
+                1,
+                2,
+                2,
+                3,
+                3,
+                -1
+            ],
+            "mode_din_intm": "Para",
+            "mode_dout": "Serial_och_2"
+        },
+        "Param": {}
+    },
+    "6_o0_k0_i0": {
+        "name": "mul_14",
+        "opexp": "Swish",
+        "Calc": {
+            "name": "actfunc",
+            "mode": "FP",
+            "is_drp": true,
+            "is_op": true,
+            "is_op_bias": false,
+            "is_add1": false,
+            "is_bnorm": false,
+            "is_add2": false,
+            "is_divide_1x1": false,
+            "activation": {
+                "name": "passthr",
+                "param_prelu": -1.0
+            }
+        },
+        "Divide": {
+            "idx_och": 0,
+            "idx_ker": 0,
+            "idx_ich": 0,
+            "num_och_div": 1,
+            "num_ker_div": 1,
+            "num_ich_div": 1
+        },
+        "Kernel": {
+            "w": -1,
+            "h": -1,
+            "div_w": -1,
+            "div_h": -1,
+            "i_col_ker": -1,
+            "i_row_ker": -1,
+            "st": -1,
+            "dil": -1,
+            "pad": {
+                "l": 0,
+                "r": 0,
+                "t": 0,
+                "b": 0
+            }
+        },
+        "Parallel": {
+            "och": 1,
+            "col": 1,
+            "row": 1
+        },
+        "ParaUser": {
+            "och": -1,
+            "col": -1,
+            "row": -1
+        },
+        "Data": {
+            "ich_org": 128,
+            "ich": 128,
+            "din_h": 40,
+            "din_w": 40,
+            "och_org": 128,
+            "och": 128,
+            "dout_h": 40,
+            "dout_w": 40
+        },
+        "Addr": {
+            "din": "conv2d_12",
+            "din_offset": 0,
+            "param": "",
+            "dout": "mul_14",
+            "dout_offset": 0,
+            "add1": "",
+            "add1_offset": 0,
+            "add2": "",
+            "add2_offset": 0,
+            "is_work_add1": false,
+            "is_work_add2": false,
+            "is_work_dout": false
+        },
+        "Hw": {
+            "pram_depth_mag": "",
+            "tbl_mac_to_ker_y": "",
+            "tbl_mac_to_para_och": "",
+            "tbl_mac_to_para_col": "",
+            "tbl_mac_to_para_row": "",
+            "tbl_mac_to_ch_din": "",
+            "tbl_mac_to_ch_din_intm": "",
+            "tbl_mac_to_ch_dout": "",
+            "mode_din_intm": "",
+            "mode_dout": ""
+        },
+        "Param": {
+            "ACTFUNC_TYPE": 4
+        }
+    },
+    "7_o0_k0_i0": {
+        "name": "post_0_0_transpose",
+        "opexp": "transpose",
+        "Calc": {
+            "name": "transpose",
+            "mode": "FP",
+            "is_drp": true,
+            "is_op": true,
+            "is_op_bias": false,
+            "is_add1": false,
+            "is_bnorm": false,
+            "is_add2": false,
+            "is_divide_1x1": "",
+            "activation": {
+                "name": "",
+                "param_prelu": ""
+            }
+        },
+        "Divide": {
+            "idx_och": -1,
+            "idx_ker": -1,
+            "idx_ich": -1,
+            "num_och_div": -1,
+            "num_ker_div": -1,
+            "num_ich_div": -1
+        },
+        "Kernel": {
+            "w": -1,
+            "h": -1,
+            "div_w": -1,
+            "div_h": -1,
+            "i_col_ker": "",
+            "i_row_ker": 0,
+            "st": -1,
+            "dil": "",
+            "pad": {
+                "l": 0,
+                "r": 0,
+                "t": 0,
+                "b": 0
+            }
+        },
+        "Parallel": {
+            "och": 1,
+            "col": 1,
+            "row": 1
+        },
+        "ParaUser": {
+            "och": -1,
+            "col": -1,
+            "row": -1
+        },
+        "Data": {
+            "ich_org": 128,
+            "ich": 128,
+            "din_h": 40,
+            "din_w": 40,
+            "och_org": 128,
+            "och": 128,
+            "dout_h": 40,
+            "dout_w": 40
+        },
+        "Addr": {
+            "din": "mul_14",
+            "din_offset": 0,
+            "param": "",
+            "dout": "to_tvm_0",
+            "dout_offset": 0,
+            "add1": "",
+            "add1_offset": 0,
+            "add2": "",
+            "add2_offset": 0,
+            "is_work_add1": false,
+            "is_work_add2": false,
+            "is_work_dout": false
+        },
+        "Hw": {
+            "pram_depth_mag": "",
+            "tbl_mac_to_ker_y": "",
+            "tbl_mac_to_para_och": "",
+            "tbl_mac_to_para_col": "",
+            "tbl_mac_to_para_row": "",
+            "tbl_mac_to_ch_din": "",
+            "tbl_mac_to_ch_din_intm": "",
+            "tbl_mac_to_ch_dout": "",
+            "mode_din_intm": "",
+            "mode_dout": ""
+        },
+        "Param": {
+            "WORD_SIZE": 1,
+            "IS_CHW2HWC": 0
+        }
+    },
+    "8_o0_k0_i0": {
+        "name": "post_1_0_transpose",
+        "opexp": "transpose",
+        "Calc": {
+            "name": "transpose",
+            "mode": "FP",
+            "is_drp": true,
+            "is_op": true,
+            "is_op_bias": false,
+            "is_add1": false,
+            "is_bnorm": false,
+            "is_add2": false,
+            "is_divide_1x1": "",
+            "activation": {
+                "name": "",
+                "param_prelu": ""
+            }
+        },
+        "Divide": {
+            "idx_och": -1,
+            "idx_ker": -1,
+            "idx_ich": -1,
+            "num_och_div": -1,
+            "num_ker_div": -1,
+            "num_ich_div": -1
+        },
+        "Kernel": {
+            "w": -1,
+            "h": -1,
+            "div_w": -1,
+            "div_h": -1,
+            "i_col_ker": "",
+            "i_row_ker": 0,
+            "st": -1,
+            "dil": "",
+            "pad": {
+                "l": 0,
+                "r": 0,
+                "t": 0,
+                "b": 0
+            }
+        },
+        "Parallel": {
+            "och": 1,
+            "col": 1,
+            "row": 1
+        },
+        "ParaUser": {
+            "och": -1,
+            "col": -1,
+            "row": -1
+        },
+        "Data": {
+            "ich_org": 64,
+            "ich": 64,
+            "din_h": 80,
+            "din_w": 80,
+            "och_org": 64,
+            "och": 64,
+            "dout_h": 80,
+            "dout_w": 80
+        },
+        "Addr": {
+            "din": "mul_4",
+            "din_offset": 0,
+            "param": "",
+            "dout": "to_tvm_1",
+            "dout_offset": 0,
+            "add1": "",
+            "add1_offset": 0,
+            "add2": "",
+            "add2_offset": 0,
+            "is_work_add1": false,
+            "is_work_add2": false,
+            "is_work_dout": false
+        },
+        "Hw": {
+            "pram_depth_mag": "",
+            "tbl_mac_to_ker_y": "",
+            "tbl_mac_to_para_och": "",
+            "tbl_mac_to_para_col": "",
+            "tbl_mac_to_para_row": "",
+            "tbl_mac_to_ch_din": "",
+            "tbl_mac_to_ch_din_intm": "",
+            "tbl_mac_to_ch_dout": "",
+            "mode_din_intm": "",
+            "mode_dout": ""
+        },
+        "Param": {
+            "WORD_SIZE": 1,
+            "IS_CHW2HWC": 0
+        }
+    }
+}

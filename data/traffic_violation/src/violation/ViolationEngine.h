@@ -16,6 +16,9 @@ public:
     // Thêm rule (plugin pattern)
     void addRule(std::shared_ptr<IViolationRule> rule);
 
+    // Xóa tất cả rules (dùng khi switch model)
+    void clearRules();
+
     // Chạy tất cả rules trên 1 frame context.
     // Áp dụng cooldown + confirm_frames trước khi emit event.
     std::vector<ViolationEvent> process(const FrameContext& ctx);

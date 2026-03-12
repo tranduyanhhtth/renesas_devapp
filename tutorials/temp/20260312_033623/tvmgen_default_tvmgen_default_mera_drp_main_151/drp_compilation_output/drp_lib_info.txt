@@ -1,0 +1,14 @@
+2  # driver version  v0.2 
+8  # driver version >v0.3
+# transpose  [MASK : ON]
+# transpose  [MASK : ON]
+# ============================
+# Address data in drp_param.bin
+# DRP LIB name[Layer Name]
+# [Start position], [Size(Byte)], [Param name], [Value]
+transpose[post_0_0_transpose]
+Start:0[Byte],Size:4[Byte],Param:raddr,Value:0x6220780
+Start:4[Byte],Size:4[Byte],Param:waddr,Value:0x6326f80
+transpose[post_0_0_transpose]
+Start:56[Byte],Size:4[Byte],Param:raddr,Value:0x642d780
+Start:60[Byte],Size:4[Byte],Param:waddr,Value:0x643de00

@@ -10,6 +10,11 @@ void ViolationEngine::addRule(std::shared_ptr<IViolationRule> rule) {
     m_rules.push_back(std::move(rule));
 }
 
+void ViolationEngine::clearRules() {
+    m_rules.clear();
+    m_state.clear();
+}
+
 std::vector<ViolationEvent> ViolationEngine::process(const FrameContext& ctx) {
     std::vector<ViolationEvent> confirmed;
 

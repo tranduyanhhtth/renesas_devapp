@@ -106,6 +106,17 @@ static DisplaySlot g_disp;
  * further synchronisation is needed for the objects themselves.           */
 static AppConfig  g_cfg;
 
+/* Active model index: 0 = Model-1 (traffic violations), 1 = Model-2 (helmet) */
+static std::atomic<int> g_active_model{0};
+/* Model-switch request from kbhit thread.  -1 = no request. */
+static std::atomic<int> g_model_req{-1};
+/* DRP-AI base address obtained at startup and used in R_Inf_Thread for reload. */
+static uint64_t         g_drpai_base{0};
+/* DRP-AI file descriptor kept open for the entire app lifetime (mirrors R01).
+ * TVM's DrpAiDeviceAPI singleton requires the application to hold an open fd
+ * to /dev/drpai0 for the duration of model loading and inference.            */
+static int              g_drpai_fd{-1};
+
 static VideoInput*      g_video        = nullptr;   /* → R_Capture_Thread  */
 static TrafficDetector* g_detector     = nullptr;   /* → R_Inf_Thread      */
 static VehicleTracker*  g_tracker      = nullptr;   /* → R_Inf_Thread      */
@@ -131,6 +142,29 @@ static std::string resolvePath(const std::string& base, const std::string& p)
 {
     if (p.empty() || p[0] == '/') return p;
     return base + "/" + p;
+}
+
+/* ────── buildViolationRules ─────────────────────────────────────────────
+ * (Re-)populate the ViolationEngine rules for a given model index.
+ * Called at startup (model_idx=0) and during live model switch.
+ * engine->clearRules() is called first so it can be used for both. */
+static void buildViolationRules(ViolationEngine* engine, int model_idx,
+                                const AppConfig& cfg)
+{
+    engine->clearRules();
+    if (model_idx == 0) {
+        /* Model 1: traffic-violation rules */
+        if (cfg.violation.red_light)
+            engine->addRule(std::make_shared<RedLightRule>(cfg.scene));
+        if (cfg.violation.wrong_lane)
+            engine->addRule(std::make_shared<WrongLaneRule>(cfg.scene));
+        if (cfg.violation.lane_line && !cfg.scene.lane_lines.empty())
+            engine->addRule(std::make_shared<LaneLineRule>(cfg.scene));
+    } else {
+        /* Model 2: helmet-detection rules */
+        if (cfg.violation.helmet)
+            engine->addRule(std::make_shared<HelmetRule>());
+    }
 }
 
 /* ────────────────── Traffic-light HSV detection ──────────────────────── */
@@ -184,10 +218,12 @@ static void drawOverlay(cv::Mat& frame,
     const std::vector<detection>&      dets,
     bool red_light, double fps)
 {
+    const int fw = frame.cols, fh = frame.rows;
     /* Raw detections (thin box) */
     for (const auto& d : dets) {
-        if (d.prob == 0.f) continue;
-        cv::Rect r = d.bbox.toRect();
+        if (d.prob == 0.f || !d.bbox.isValid()) continue;
+        cv::Rect r = d.bbox.toSafeRect(fw, fh);
+        if (r.area() <= 0) continue;
         cv::Scalar col(180, 180, 180);
         if      (g_cfg.detector.isVehicle(d.c)) col = cv::Scalar(0, 220, 0);
         else if (g_cfg.detector.isHelmet(d.c))  col = cv::Scalar(255, 200, 0);
@@ -195,12 +231,13 @@ static void drawOverlay(cv::Mat& frame,
         cv::rectangle(frame, r, col, 1);
         const auto& lbs = g_detector->labels();
         if (d.c >= 0 && d.c < (int)lbs.size())
-            cv::putText(frame, lbs[d.c], {r.x, r.y - 3},
+            cv::putText(frame, lbs[d.c], {r.x, std::max(r.y - 3, 12)},
                         cv::FONT_HERSHEY_SIMPLEX, 0.4, col, 1);
     }
     /* Tracked vehicles (thick box + label) */
     for (const auto& v : vehicles) {
-        cv::Rect r = v.bbox.toRect();
+        cv::Rect r = v.bbox.toSafeRect(fw, fh);
+        if (r.area() <= 0) continue;
         cv::Scalar color = (v.type == VehicleType::MOTORBIKE)
                            ? cv::Scalar(0, 255, 0) : cv::Scalar(255, 200, 0);
         cv::rectangle(frame, r, color, 2);
@@ -321,7 +358,28 @@ void* R_Inf_Thread(void* /*threadid*/)
             goto err;
         }
         if (1 != sem_check) goto inf_end;
-
+        /* ── Model-switch requested by kbhit thread? ─────────────────────── */
+        {
+            int req = g_model_req.exchange(-1);
+            if (req >= 0 && req != g_active_model.load()) {
+                printf("[Inference] Switching to Model %d...\n", req + 1);
+                const DetectorConfig& dcfg =
+                    (req == 0) ? g_cfg.detector : g_cfg.detector2;
+                /* Tear down current detector/tracker; keep engine/logger. */
+                delete g_detector;  g_detector = nullptr;
+                delete g_tracker;   g_tracker  = nullptr;
+                g_detector = new TrafficDetector(dcfg);
+                g_tracker  = new VehicleTracker(dcfg, 6, 0.35f);
+                buildViolationRules(g_engine, req, g_cfg);
+                if (!g_detector->load(g_drpai_base + DRPAI_MEM_OFFSET)) {
+                    fprintf(stderr, "[Inference][ERROR] Model %d load failed\n", req + 1);
+                    goto err;
+                }
+                g_active_model.store(req);
+                printf("[Inference] Now running Model %d (%s)\n",
+                       req + 1, dcfg.model_dir.c_str());
+            }
+        }
         /* ── Wait for new frame ─────────────────────────────────────────── */
         if (!g_cap.ready.load()) { usleep(WAIT_TIME); continue; }
 
@@ -343,11 +401,11 @@ void* R_Inf_Thread(void* /*threadid*/)
         /* ── 3. Helmet association ───────────────────────────────────────── */
         for (const auto& v : tracks) {
             if (v.type != VehicleType::MOTORBIKE) continue;
-            cv::Rect rider = v.bbox.toRect();
             bool found = false;
             for (const auto& d : dets) {
                 if (!g_cfg.detector.isHelmet(d.c) || d.prob == 0.f) continue;
-                if ((d.bbox.toRect() & rider).area() > d.bbox.toRect().area() * 0.3f)
+                float inter = d.bbox.intersectArea(v.bbox);
+                if (inter > d.bbox.w * d.bbox.h * 0.3f)
                     { found = true; break; }
             }
             g_tracker->setHelmet(v.track_id, found);
@@ -357,11 +415,12 @@ void* R_Inf_Thread(void* /*threadid*/)
         if (g_cfg.enable_lp_ocr && (frame_idx % LP_OCR_INTERVAL == 0)) {
             for (const auto& v : tracks) {
                 if (!v.plate.empty()) continue;
-                cv::Rect vbox = v.bbox.toRect();
                 for (const auto& d : dets) {
                     if (!g_cfg.detector.isLP(d.c) || d.prob == 0.f) continue;
-                    cv::Rect lbox = d.bbox.toRect();
-                    if ((lbox & vbox).area() < lbox.area() * 0.2f) continue;
+                    float inter = d.bbox.intersectArea(v.bbox);
+                    if (inter < d.bbox.w * d.bbox.h * 0.2f) continue;
+                    cv::Rect lbox = d.bbox.toSafeRect(frame.cols, frame.rows);
+                    if (lbox.area() < 100) continue;
                     std::string plate = runLpOcr(frame, lbox);
                     if (!plate.empty()) { g_tracker->setPlate(v.track_id, plate); break; }
                 }
@@ -511,7 +570,10 @@ void* R_Kbhit_Thread(void* /*threadid*/)
 
     printf("[KbHit] Thread started\n");
     printf("==============================================\n");
-    printf("  Press ENTER key to stop the application.  \n");
+    printf("  Keys:\n");
+    printf("    '1'   → switch to Model 1 (traffic violations)\n");
+    printf("    '2'   → switch to Model 2 (helmet detection)\n");
+    printf("    other → stop application\n");
     printf("==============================================\n");
 
     errno = 0;
@@ -533,8 +595,28 @@ void* R_Kbhit_Thread(void* /*threadid*/)
 
         c = getchar();
         if (EOF != c) {
-            printf("[KbHit] Key detected – stopping pipeline.\n");
-            goto err;
+            if (c == '1') {
+                if (g_active_model.load() != 0) {
+                    g_model_req.store(0);
+                    printf("[KbHit] Model 1 requested (traffic violations)\n");
+                } else {
+                    printf("[KbHit] Already on Model 1\n");
+                }
+            } else if (c == '2') {
+                if (!g_cfg.detector2_enabled) {
+                    printf("[KbHit] Model 2 not configured in config.yaml\n");
+                } else if (g_active_model.load() != 1) {
+                    g_model_req.store(1);
+                    printf("[KbHit] Model 2 requested (helmet detection)\n");
+                } else {
+                    printf("[KbHit] Already on Model 2\n");
+                }
+            } else if (c == '\n' || c == '\r') {
+                /* bare newline from piped input – ignore */
+            } else {
+                printf("[KbHit] Key detected – stopping pipeline.\n");
+                goto err;
+            }
         }
         usleep(WAIT_TIME);
     }
@@ -586,6 +668,12 @@ int main(int argc, char* argv[])
     g_cfg.detector.pre_dir    = resolvePath(base, g_cfg.detector.pre_dir);
     g_cfg.detector.label_file = resolvePath(base, g_cfg.detector.label_file);
     g_cfg.output.save_dir     = resolvePath(base, g_cfg.output.save_dir);
+    if (g_cfg.detector2_enabled) {
+        g_cfg.detector2.model_dir  = resolvePath(base, g_cfg.detector2.model_dir);
+        g_cfg.detector2.pre_dir    = resolvePath(base, g_cfg.detector2.pre_dir);
+        g_cfg.detector2.label_file = resolvePath(base, g_cfg.detector2.label_file);
+        printf("[Main] Model 2  : %s\n", g_cfg.detector2.model_dir.c_str());
+    }
 
     printf("[Main] Model    : %s\n", g_cfg.detector.model_dir.c_str());
     printf("[Main] Input    : %dx%d  fps=%d\n",
@@ -614,21 +702,31 @@ int main(int argc, char* argv[])
     }
 
 #ifdef WITH_DRP
-    {
-        int fd = open("/dev/drpai0", O_RDWR);
-        if (fd < 0) {
-            fprintf(stderr, "[Main][ERROR] Cannot open /dev/drpai0\n");
-            ret_main = -1;
-            goto end_main;
-        }
-        unsigned long addr = 0;
-        if (ioctl(fd, DRPAI_GET_DRPAI_AREA, &addr) == 0)
-            drpai_base = static_cast<uint64_t>(addr);
-        ::close(fd);
-        printf("[Main] DRP-AI base: 0x%lx  model offset: 0x%lx\n",
-               (unsigned long)drpai_base, (unsigned long)DRPAI_MEM_OFFSET);
+    /* Open /dev/drpai0 and keep it open for the ENTIRE app lifetime.
+     * TVM's DrpAiDeviceAPI singleton (DrpAiDeviceAPI, MERADRPRuntime) requires
+     * an open application-level fd to /dev/drpai0 while LoadModel/SetInput/Run
+     * are active.  Closing the fd before LoadModel — as done by the original
+     * code — causes get_input() to SIGSEGV inside TVM on first inference.
+     * This mirrors R01_object_detection_yolov8 which closes drpai_fd only at
+     * end_close_drpai (after all threads are joined).                          */
+    g_drpai_fd = open("/dev/drpai0", O_RDWR);
+    if (g_drpai_fd < 0) {
+        fprintf(stderr, "[Main][ERROR] Cannot open /dev/drpai0: %s\n", strerror(errno));
+        ret_main = -1;
+        goto end_main;
     }
+    {
+        drpai_data_t drpai_data;
+        drpai_data.address = 0;
+        drpai_data.size    = 0;
+        if (ioctl(g_drpai_fd, DRPAI_GET_DRPAI_AREA, &drpai_data) == 0)
+            drpai_base = static_cast<uint64_t>(drpai_data.address);
+    }
+    printf("[Main] DRP-AI fd=%d  base: 0x%lx  model offset: 0x%lx\n",
+           g_drpai_fd, (unsigned long)drpai_base, (unsigned long)DRPAI_MEM_OFFSET);
+    /* NOTE: g_drpai_fd is NOT closed here — closed at end_cleanup after threads join */
 #endif
+    g_drpai_base = drpai_base;   /* expose for R_Inf_Thread model-switch reload */
 
     /* ── 3. Construct pipeline objects ──────────────────────────────────── */
     g_detector     = new TrafficDetector(g_cfg.detector);
@@ -644,14 +742,7 @@ int main(int argc, char* argv[])
                                     g_cfg.gstreamer_pipeline,
                                     /* loop_file= */ false);
 
-    if (g_cfg.violation.helmet)
-        g_engine->addRule(std::make_shared<HelmetRule>());
-    if (g_cfg.violation.red_light)
-        g_engine->addRule(std::make_shared<RedLightRule>(g_cfg.scene));
-    if (g_cfg.violation.wrong_lane)
-        g_engine->addRule(std::make_shared<WrongLaneRule>(g_cfg.scene));
-    if (g_cfg.violation.lane_line && !g_cfg.scene.lane_lines.empty())
-        g_engine->addRule(std::make_shared<LaneLineRule>(g_cfg.scene));
+    buildViolationRules(g_engine, 0, g_cfg);   /* load model-1 rules */
 
     if (!g_cfg.output.annotated_video.empty()) {
         g_vwriter = new cv::VideoWriter(
@@ -664,6 +755,9 @@ int main(int argc, char* argv[])
     /* ── 4. Load DRP-AI model ────────────────────────────────────────────── */
     /* Pass (base + DRPAI_MEM_OFFSET) so TVM model memory does not overlap
      * with PreRuntime's memory region (same as R01 V2L: drpaimem_addr_start+offset). */
+    /* PreRuntime is disabled; pass plain drpai_base without offset — same as R01
+     * which passes drpaimem_addr_start directly.  When PreRuntime is re-enabled
+     * the PreRuntime takes [base, base+DRPAI_MEM_OFFSET) and TVM gets base+offset. */
     if (!g_detector->load(drpai_base + DRPAI_MEM_OFFSET)) {
         fprintf(stderr, "[Main][ERROR] TrafficDetector::load() failed\n");
         ret_main = -1;
@@ -716,7 +810,11 @@ int main(int argc, char* argv[])
         goto end_threads;
     }
 
-    printf("[Main] All 4 threads running. Press ENTER to stop.\n");
+    printf("[Main] All 4 threads running.\n");
+    printf("  '1' → switch to Model 1 (traffic violations)\n");
+    if (g_cfg.detector2_enabled)
+        printf("  '2' → switch to Model 2 (helmet detection)\n");
+    printf("  any other key → stop\n");
 
     /* ── 7. Join threads ─────────────────────────────────────────────────── */
     /*
@@ -740,6 +838,11 @@ end_cleanup:
     delete g_engine;       g_engine       = nullptr;
     delete g_tracker;      g_tracker      = nullptr;
     delete g_detector;     g_detector     = nullptr;
+    /* Close DRP-AI driver fd — mirrors R01 end_close_drpai */
+    if (g_drpai_fd >= 0) {
+        close(g_drpai_fd);
+        g_drpai_fd = -1;
+    }
 
 end_main:
     printf("[Main] Done. Violations logged: %zu  ret=%d\n",

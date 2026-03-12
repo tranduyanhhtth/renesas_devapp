@@ -107,8 +107,14 @@ struct AppConfig {
     int   video_fps    = 30;
     std::string gstreamer_pipeline;
 
-    /* Single unified detector */
+    /* Single unified detector (Model 1 – traffic violations) */
     DetectorConfig detector;
+
+    /* Optional second model (Model 2 – e.g. helmet detection).
+     * Loaded on demand when user presses key '2'.  When false the
+     * second detector block is absent from config.yaml. */
+    DetectorConfig detector2;
+    bool           detector2_enabled{false};
 
     /* Scene / violation / output */
     SceneConfig     scene;

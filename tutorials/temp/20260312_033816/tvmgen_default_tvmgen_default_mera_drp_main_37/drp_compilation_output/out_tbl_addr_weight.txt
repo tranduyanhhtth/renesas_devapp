@@ -1,0 +1,4 @@
+conv2d_2_o0_k0_i0_param             45959712
+conv2d_7_o0_k0_i0_param             45996768
+conv2d_13_o0_k0_i0_param            46033824
+conv2d_18_o0_k0_i0_param            46070880

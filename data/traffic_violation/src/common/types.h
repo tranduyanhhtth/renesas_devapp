@@ -13,10 +13,15 @@
 struct Box {
     float x, y, w, h;
     cv::Rect toRect() const {
-        return cv::Rect(
-            static_cast<int>(x - w / 2), static_cast<int>(y - h / 2),
-            static_cast<int>(w), static_cast<int>(h));
+        int rw = static_cast<int>(w); if (rw < 1) rw = 1;
+        int rh = static_cast<int>(h); if (rh < 1) rh = 1;
+        return cv::Rect(static_cast<int>(x - w/2), static_cast<int>(y - h/2), rw, rh);
     }
+    cv::Rect toSafeRect(int fw, int fh) const {
+        cv::Rect r = toRect();
+        return r & cv::Rect(0, 0, fw, fh);
+    }
+    bool isValid() const { return w > 0.5f && h > 0.5f; }
     float intersectArea(const Box& o) const {
         float ix1 = std::max(x-w/2, o.x-o.w/2), iy1 = std::max(y-h/2, o.y-o.h/2);
         float ix2 = std::min(x+w/2, o.x+o.w/2), iy2 = std::min(y+h/2, o.y+o.h/2);

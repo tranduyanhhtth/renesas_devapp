@@ -1,0 +1,10 @@
+Output_node_name: to_tvm_0
+         Address: 0x4021640
+         Channel: 128
+         Width  : 80
+         Height : 80
+Output_node_name: to_tvm_1
+         Address: 0x41b1640
+         Channel: 128
+         Width  : 40
+         Height : 40

@@ -1,0 +1,5 @@
+Input_node_name: from_tvm_0
+         Address: 0x261d400
+         Channel: 192
+         Width  : 40
+         Height : 40

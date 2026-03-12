@@ -1,0 +1,6 @@
+Car
+Motorcycle
+Truck
+Bus
+Person
+Plate

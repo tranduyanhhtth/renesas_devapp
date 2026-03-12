@@ -1,0 +1,5 @@
+Input_node_name: from_tvm_0
+         Address: 0x6c93540
+         Channel: 3
+         Width  : 640
+         Height : 640

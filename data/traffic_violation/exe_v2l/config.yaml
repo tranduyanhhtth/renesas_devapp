@@ -1,86 +1,63 @@
-##############################################################################
-# exe_v2l/config.yaml  - Deployment config for RZ/V2L board
-# NOTE: ASCII-only - OpenCV 4.1.0 FileStorage cannot parse UTF-8 in YAML files.
-##############################################################################
-
-# -- Video input --------------------------------------------------------------
-# source_type options (edit the two lines below to switch):
-#   "file"   - MP4/AVI video file for offline testing
-#              source: "/home/root/traffic_violation/input.mp4"
-#   "usb"    - USB camera via v4l2src
-#              source: "/dev/video0"
-#   "mipi"   - MIPI CSI-2 camera (OV5645) on RZ/V2L
-#              source: "/dev/video0"  (runs 4 media-ctl init commands automatically)
-#   "rtsp"   - IP camera over network
-#              source: "rtsp://192.168.1.100:554/stream"
-#   "custom" - use gstreamer_pipeline string directly
+%YAML:1.0
+---
 video:
-  source_type: "mipi"
-  source: "/dev/video0"
+  source_type: "file"
+  source: "CarsDrivingUnderBridge.mp4"
   width:  640
   height: 480
   fps:    20
   gstreamer_pipeline: ""
 
-# -- Detector -----------------------------------------------------------------
-# model_type: "yolov8"  -> anchor-free,  output [num_class+4, total_anchors]
-# model_type: "yolov3"  -> anchor-based, requires grids + anchors
-#
-# OPTION A: YOLOv8n COCO 80 classes
 detector:
   model_type:   "yolov8"
   model_dir:    "models/yolov8n_onnx"
   pre_dir:      "models/yolov8n_onnx/preprocess"
-  label_file:   "models/yolov8n_onnx/coco-labels-2014_2017.txt"
+  label_file:   "models/yolov8n_onnx/label.txt"
   input_width:  640
   input_height: 640
   drpai_freq:   2
   conf_threshold: 0.25
   nms_threshold:  0.45
-  num_class:   80
+  num_class:   6
   num_bb:      1
   num_layers:  3
   grids:       [80, 40, 20]
-  # COCO class IDs:
-  class_motorbike:     3
-  class_car:           2
-  class_truck:         7
-  class_bus:           5
-  class_person:        0
-  class_helmet:        -1   # not in COCO -> HelmetRule disabled
-  class_license_plate: -1   # not in COCO -> LP OCR disabled
+  class_car:           0
+  class_motorbike:     1
+  class_truck:         2
+  class_bus:           3
+  class_person:        4
+  class_helmet:        -1
+  class_license_plate: 5
 
-# OPTION B: Custom YOLOv3 7 classes (train + compile with DRP-AI TVM)
-# detector:
-#   model_type:  "yolov3"
-#   model_dir:   "models/traffic_yolov3"
-#   pre_dir:     "models/traffic_yolov3/preprocess"
-#   label_file:  "models/traffic_yolov3/labels.txt"
-#   input_width:  416
-#   input_height: 416
-#   drpai_freq:   2
-#   conf_threshold: 0.50
-#   nms_threshold:  0.45
-#   num_class:   7
-#   num_bb:      3
-#   num_layers:  3
-#   grids:       [13, 26, 52]
-#   anchors:     [10,13, 16,30, 33,23, 30,61, 62,45, 59,119, 116,90, 156,198, 373,326]
-#   class_motorbike:     0
-#   class_car:           1
-#   class_truck:         2
-#   class_bus:           3
-#   class_person:        4
-#   class_helmet:        5
-#   class_license_plate: 6
+detector2:
+  model_type:   "yolov8"
+  model_dir:    "models/yolov8n_helmet_onnx"
+  pre_dir:      "models/yolov8n_helmet_onnx/preprocess"
+  label_file:   "models/yolov8n_helmet_onnx/label.txt"
+  input_width:  640
+  input_height: 640
+  drpai_freq:   2
+  conf_threshold: 0.35
+  nms_threshold:  0.45
+  num_class:   4
+  num_bb:      1
+  num_layers:  3
+  grids:       [80, 40, 20]
+  class_car:           -1
+  class_motorbike:     0
+  class_truck:         -1
+  class_bus:           -1
+  class_person:        1
+  class_helmet:        2
+  class_license_plate: 3
 
-enable_lp_ocr: false   # COCO has no LP class -> disabled
+enable_lp_ocr: 1
 
 drpai:
   freq_index:  2
   mem_offset:  0
 
-# -- Scene ROI ----------------------------------------------------------------
 scene:
   stop_line:
     y1: 0.60
@@ -98,20 +75,18 @@ scene:
     - { x_norm: 0.33, overlap_px: 10 }
     - { x_norm: 0.66, overlap_px: 10 }
 
-# -- Violation engine ---------------------------------------------------------
 violation:
   rules:
-    helmet:     false   # disabled: class_helmet=-1 (not in COCO)
-    red_light:  true
-    wrong_lane: true
-    lane_line:  true
+    helmet:     0
+    red_light:  1
+    wrong_lane: 1
+    lane_line:  1
   cooldown_sec: 5.0
   confirm_frames: 3
 
-# -- Output -------------------------------------------------------------------
 output:
   save_dir: "./violations"
   filename_pattern: "{plate}_{datetime}_{violation}"
-  save_full_frame: true
-  save_json: true
+  save_full_frame: 1
+  save_json: 1
   annotated_video: ""

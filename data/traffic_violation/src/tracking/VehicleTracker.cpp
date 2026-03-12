@@ -39,11 +39,12 @@ const std::vector<TrackedVehicle>& VehicleTracker::update(
             vdets.push_back(d);
 
     std::vector<bool> matched_det(vdets.size(), false);
-    std::vector<bool> matched_trk(m_tracks.size(), false);
+    const int old_trk_count = (int)m_tracks.size();  /* save BEFORE adding new tracks */
+    std::vector<bool> matched_trk(old_trk_count, false);
 
     /* Greedy IoU matching (highest IoU first) */
     std::vector<std::tuple<float,int,int>> scores;
-    for (int t=0;t<(int)m_tracks.size();++t)
+    for (int t=0;t<old_trk_count;++t)
         for (int d=0;d<(int)vdets.size();++d) {
             float iou = computeIou(m_tracks[t].bbox, vdets[d].bbox);
             if (iou >= m_iou_thresh) scores.emplace_back(iou,t,d);
@@ -74,8 +75,9 @@ const std::vector<TrackedVehicle>& VehicleTracker::update(
         m_tracks.push_back(nv);
     }
 
-    /* Prune stale tracks */
-    for (int t=0;t<(int)m_tracks.size();++t)
+    /* Prune stale tracks — only increment missed_frames for ORIGINAL tracks
+     * (matched_trk covers [0, old_trk_count); new tracks are already missed=0) */
+    for (int t=0;t<old_trk_count;++t)
         if (!matched_trk[t]) ++m_tracks[t].missed_frames;
     m_tracks.erase(
         std::remove_if(m_tracks.begin(),m_tracks.end(),

@@ -1,0 +1,12 @@
+mera_drp_5_i0                       18042624
+conv2d_2                            18247424
+mul_4                               18349824
+resize_5                            18452224
+from_tvm_0                          17837824
+to_tvm_0                            18861824
+to_tvm_1                            19271424
+zero                                19373824
+conv2d_2_o0_k0_i0_param             19373824
+transpose.mem                       19505152     134128
+actfunc.mem                         19639280     174860
+resize_onnx.mem                     19814144     167632

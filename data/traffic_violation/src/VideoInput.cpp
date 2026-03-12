@@ -68,20 +68,6 @@ std::string VideoInput::buildGstreamerPipeline() const
                " ! appsink drop=true sync=false";
     }
 
-    case SourceType::USB: {
-        /* v4l2src cho USB camera – io-mode=dmabuf như R01.
-         * source = "/dev/video0" hoặc số nguyên "0" (→ /dev/video0).         */
-        std::string dev = m_source;
-        if (!m_source.empty() &&
-            m_source.find_first_not_of("0123456789") == std::string::npos)
-            dev = "/dev/video" + m_source;   /* "0" → "/dev/video0" */
-
-        return "v4l2src device=" + dev + " io-mode=dmabuf"
-               " ! video/x-raw,width=" + W + ",height=" + H +
-               ",framerate=" + FPS + "/1"
-               " ! videoconvert ! appsink drop=true sync=false";
-    }
-
     case SourceType::MIPI: {
         /* Sau khi mipiInit() đã cấu hình media-ctl, dùng v4l2src như USB.
          * source = "/dev/video0" (thiết bị CRU output).                       */
@@ -92,16 +78,6 @@ std::string VideoInput::buildGstreamerPipeline() const
                " ! videoconvert ! appsink drop=true sync=false";
     }
 
-    case SourceType::RTSP: {
-        /* rtspsrc → rtph264depay → h264parse → avdec_h264 → scale → appsink */
-        return "rtspsrc location=" + m_source + " latency=0 buffer-mode=auto"
-               " ! rtph264depay ! h264parse ! avdec_h264"
-               " ! videoconvert ! videoscale"
-               " ! video/x-raw,width=" + W + ",height=" + H +
-               " ! appsink drop=true sync=false";
-    }
-
-    case SourceType::CUSTOM:
     default:
         /* gstreamer_pipeline được set từ bên ngoài, không build ở đây */
         return m_gst_pipeline;

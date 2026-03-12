@@ -74,7 +74,7 @@ const static std::string model_dir = "yolov8n_onnx";
 /* Pre-processing Runtime Object */
 const static std::string pre_dir = model_dir + "/preprocess";
 /* Class labels to be classified */
-const static std::string label_list = "coco-labels-2014_2017.txt";
+const static std::string label_list = "label.txt";
 /* Empty since labels will be loaded from label_list file */
 static std::vector<std::string> label_file_map = {};
 
@@ -114,12 +114,12 @@ static std::vector<std::string> label_file_map = {};
 #define RESIZE_SCALE                (1.5)
 
 /* Number of class to be detected */
-#define NUM_CLASS                   (80)
+#define NUM_CLASS                   (6)
 /* YOLOv8 is anchor-free.
  * Total detection points = 80x80 + 40x40 + 20x20 = 8400 */
 #define NUM_ANCHORS                 (8400)
-/* YOLOv8 output features per detection point: 4 (cx,cy,w,h) + 80 (class scores) */
-#define NUM_FEATURES                (84)
+/* YOLOv8 output features per detection point: 4 (cx,cy,w,h) + 6 (class scores) */
+#define NUM_FEATURES                (10)
 /* Thresholds */
 #define TH_PROB                     (0.25f)
 #define TH_NMS                      (0.45f)

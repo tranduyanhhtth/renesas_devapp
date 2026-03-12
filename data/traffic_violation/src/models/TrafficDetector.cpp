@@ -70,6 +70,13 @@ bool TrafficDetector::load(uint64_t drpai_base_addr)
     m_output_buf.resize(m_inf_out_size, 0.f);
 
     /* ── Pre-processing Runtime ─────────────────────────────────────────────── */
+    /* NOTE: PreRuntime and TVM DRP-AI runtime share the /dev/drpai0 device file.
+     * PreRuntime::Load() must be called BEFORE TVM LoadModel() because it
+     * initialises the DRP-AI memory regions via DRPAI_ASSIGN ioctls.  Without
+     * that initialisation, TVM's graph executor crashes in get_input() when it
+     * tries to access DRP-AI-mapped tensors.  This mirrors R01's call order:
+     *   preruntime.Load(pre_dir)  → then  runtime.LoadModel(model_dir, addr)  */
+    m_pre_ok = false;
     if (!m_cfg.pre_dir.empty()) {
         int ret = m_preruntime.Load(m_cfg.pre_dir);
         if (ret != 0) {
@@ -110,6 +117,27 @@ bool TrafficDetector::load(uint64_t drpai_base_addr)
     }
     m_runtime_ok = true;
     std::cout << "[TrafficDetector] Model loaded: " << m_cfg.model_dir << "\n";
+
+    /* ── Resize output buffer to the ACTUAL TVM model output (prevents heap
+     * corruption when the compiled model's output size differs from the
+     * value computed from config grids/num_class).                        ── */
+    {
+        int64_t actual_out = 0;
+        int nout = m_runtime.GetNumOutput();
+        for (int i = 0; i < nout; i++) {
+            auto o = m_runtime.GetOutput(i);
+            actual_out += std::get<2>(o);
+        }
+        if (actual_out > 0 && actual_out != (int64_t)m_inf_out_size) {
+            std::cout << "[TrafficDetector] Output buf: config=" << m_inf_out_size
+                      << " actual=" << actual_out << " -> using actual\n";
+            m_inf_out_size = (int)actual_out;
+        }
+        m_output_buf.resize(m_inf_out_size, 0.f);
+        std::cout << "[TrafficDetector] Output buf: " << m_inf_out_size
+                  << " floats (" << nout << " output head(s))\n";
+    }
+
     return true;
 #endif
 }
@@ -199,6 +227,9 @@ void TrafficDetector::postProcessYolov8(const float* floatarr,
         d.bbox = { cx, cy, w, h };
         d.c    = pred_cls;
         d.prob = max_cls;
+        /* Skip degenerate / NaN boxes that crash cv::rectangle on aarch64 */
+        if (w < 1.f || h < 1.f || !std::isfinite(w) || !std::isfinite(h) ||
+            !std::isfinite(cx) || !std::isfinite(cy)) continue;
         dets.push_back(d);
     }
 
@@ -273,6 +304,7 @@ void TrafficDetector::postProcessAnchored(const float* floatarr,
                     float prob = max_prob * objectness;
                     if (prob > m_cfg.conf_threshold)
                     {
+                        if (bw < 1.f || bh < 1.f || !std::isfinite(bw) || !std::isfinite(bh)) continue;
                         detection d;
                         d.bbox = {cx, cy, bw, bh};
                         d.c    = pred_cls;
@@ -314,32 +346,52 @@ std::vector<detection> TrafficDetector::detect(const cv::Mat& frame)
          *      it does the resize to model input size (640x640) internally.
          *   2. Flush CPU cache so physical address is coherent
          *   3. Pass: phy_addr, pre_in_shape_w=frame.cols, pre_in_shape_h=frame.rows */
-        const size_t copy_bytes = (size_t)frame.cols * frame.rows * frame.channels();
-        memcpy(m_drpai_buf->mem, frame.data, copy_bytes);
+        /* ── R01 pattern: pad frame to SQUARE before DMA copy ────────────────
+         * The PreRuntime binary is compiled with PRE_IN_W = PRE_IN_H =
+         * input_width (640×640).  R01 does the same: it calls
+         *   cv::vconcat(640×480_frame, 160×640_black_pad, 640×640_result)
+         * before memcpy.  Passing height=480 to Pre() gives it wrong input
+         * shape → outputs raw uint8 (not FP32) → SetInput over-reads buffer
+         * → SIGSEGV.  Always set pre_in_shape_h = input_width (square). */
+        const int   sq   = m_cfg.input_width;          /* target square side */
+        const int   padr = sq - frame.rows;            /* rows of black pad  */
+        cv::Mat padded;
+        if (padr > 0) {
+            cv::Mat pad(padr, frame.cols, frame.type(), cv::Scalar(0, 0, 0));
+            cv::vconcat(frame, pad, padded);
+        } else {
+            padded = frame;    /* already square (or taller) */
+        }
+        const size_t copy_bytes = std::min(
+            (size_t)padded.total() * padded.elemSize(), (size_t)m_drpai_buf->size);
+        memcpy(m_drpai_buf->mem, padded.data, copy_bytes);
 
         int fr = buffer_flush_dmabuf(m_drpai_buf->idx, m_drpai_buf->size);
         if (fr != 0)
             std::cerr << "[TrafficDetector] buffer_flush_dmabuf failed (ret=" << fr << ")\n";
 
         s_preproc_param_t pre_param;
-        /* pre_in_shape must match the RAW camera frame written to DMA buf.
-         * R01: DRPAI_IN_WIDTH=640, DRPAI_IN_HEIGHT=640 (after padding to square).
-         * Our preprocess config: IMG_IWIDTH=640, IMG_IHEIGHT=480 (raw camera).
-         * Leaving at INVALID_SHAPE (0xFFFF) causes DRP-AI hardware to timeout. */
-        pre_param.pre_in_shape_w = (uint16_t)frame.cols;   /* 640 */
-        pre_param.pre_in_shape_h = (uint16_t)frame.rows;   /* 480 */
+        /* Always supply SQUARE shape = input_width × input_width (R01 style). */
+        pre_param.pre_in_shape_w = (uint16_t)sq;
+        pre_param.pre_in_shape_h = (uint16_t)sq;
         pre_param.pre_in_addr    = (uintptr_t)m_drpai_buf->phy_addr;
 
         void*    out_ptr  = nullptr;
         uint32_t out_size = 0;
         uint8_t r = m_preruntime.Pre(&pre_param, &out_ptr, &out_size);
-        if (r != 0) {
+        if (r != 0 || out_ptr == nullptr) {
             /* PreRuntime failed → fall back to CPU */
+            std::cerr << "[TrafficDetector] PreRuntime.Pre failed (r=" << (int)r
+                      << ") → CPU fallback\n";
             std::vector<float> cpu_in;
             cpuPreprocess(frame, cpu_in);
             m_runtime.SetInput(0, cpu_in.data());
         } else {
-            m_runtime.SetInput(0, (float*)out_ptr);
+            /* Pass PreRuntime FP32 output directly to TVM SetInput */
+            const size_t num_floats = (size_t)out_size;
+            const float* fp_ptr = reinterpret_cast<const float*>(out_ptr);
+            std::vector<float> cpu_in(fp_ptr, fp_ptr + num_floats);
+            m_runtime.SetInput(0, cpu_in.data());
         }
     }
     else
@@ -368,16 +420,26 @@ std::vector<detection> TrafficDetector::detect(const cv::Mat& frame)
         auto out = m_runtime.GetOutput(i);
         int64_t sz  = std::get<2>(out);
         InOutDataType dtype = std::get<0>(out);
+
+        /* Safety: expand buffer on-the-fly if model output exceeds our estimate.
+         * This prevents silent heap-overflow-induced heap corruption. */
+        if (count + sz > (int64_t)m_output_buf.size()) {
+            std::cerr << "[TrafficDetector][WARN] output buf too small ("
+                      << m_output_buf.size() << "), expanding to "
+                      << (count + sz) << "\n";
+            m_output_buf.resize(count + sz, 0.f);
+        }
+
         if (dtype == InOutDataType::FLOAT16) {
             uint16_t* ptr = reinterpret_cast<uint16_t*>(std::get<1>(out));
-            for (int j = 0; j < sz; j++)
+            for (int64_t j = 0; j < sz; j++)
                 m_output_buf[count + j] = fp16_to_fp32(ptr[j]);
         } else {
             float* ptr = reinterpret_cast<float*>(std::get<1>(out));
-            for (int j = 0; j < sz; j++)
+            for (int64_t j = 0; j < sz; j++)
                 m_output_buf[count + j] = ptr[j];
         }
-        count += sz;
+        count += (int)sz;
     }
 
     /* ── Post-processing ────────────────────────────────────────────────────── */

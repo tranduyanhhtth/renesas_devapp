@@ -1,0 +1,44 @@
+9  # driver version  v0.2 
+36  # driver version >v0.3
+# transpose  [MASK : ON]
+# actfunc  [MASK : ON]
+# maxpooling_k5_st1  [MASK : ON]
+# maxpooling_k5_st1  [MASK : ON]
+# maxpooling_k5_st1  [MASK : ON]
+# transpose  [MASK : ON]
+# transpose  [MASK : ON]
+# transpose  [MASK : ON]
+# transpose  [MASK : ON]
+# ============================
+# Address data in drp_param.bin
+# DRP LIB name[Layer Name]
+# [Start position], [Size(Byte)], [Param name], [Value]
+transpose[post_0_0_transpose]
+Start:0[Byte],Size:4[Byte],Param:raddr,Value:0x4b3f200
+Start:4[Byte],Size:4[Byte],Param:waddr,Value:0x4b8a200
+actfunc[mul_4]
+Start:56[Byte],Size:4[Byte],Param:raddr,Value:0x4bd5200
+Start:60[Byte],Size:4[Byte],Param:waddr,Value:0x4c07200
+Start:108[Byte],Size:4[Byte],Param:PRELU_WEIGHT_ADDR,Value:0x0
+Start:116[Byte],Size:4[Byte],Param:BNORM_ADDR,Value:0x0
+maxpooling_k5_st1[maxpool2d_8]
+Start:120[Byte],Size:4[Byte],Param:raddr,Value:0x4c39200
+Start:124[Byte],Size:4[Byte],Param:waddr,Value:0x4c52200
+maxpooling_k5_st1[maxpool2d_9]
+Start:176[Byte],Size:4[Byte],Param:raddr,Value:0x4c52200
+Start:180[Byte],Size:4[Byte],Param:waddr,Value:0x4c6b200
+maxpooling_k5_st1[maxpool2d_10]
+Start:232[Byte],Size:4[Byte],Param:raddr,Value:0x4c6b200
+Start:236[Byte],Size:4[Byte],Param:waddr,Value:0x4c84200
+transpose[post_0_0_transpose]
+Start:288[Byte],Size:4[Byte],Param:raddr,Value:0x4c39200
+Start:292[Byte],Size:4[Byte],Param:waddr,Value:0x4c9d200
+transpose[post_1_0_transpose]
+Start:344[Byte],Size:4[Byte],Param:raddr,Value:0x4c52200
+Start:348[Byte],Size:4[Byte],Param:waddr,Value:0x4cb6200
+transpose[post_2_0_transpose]
+Start:400[Byte],Size:4[Byte],Param:raddr,Value:0x4c6b200
+Start:404[Byte],Size:4[Byte],Param:waddr,Value:0x4ccf200
+transpose[post_3_0_transpose]
+Start:456[Byte],Size:4[Byte],Param:raddr,Value:0x4c84200
+Start:460[Byte],Size:4[Byte],Param:waddr,Value:0x4ce8200
