@@ -303,3 +303,5 @@ violations/
 
 Xem [exe_v2l/README.md](exe_v2l/README.md) để biết các bước chi tiết:  
 train model → compile V2L → cross-compile binary → copy lên kit → chạy.
+
+# -Project-AI-Traffic-Monitoring-Camera
