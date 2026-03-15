@@ -19,6 +19,24 @@ Hệ thống phát hiện vi phạm giao thông tại ngã tư từ video, chạ
 
 **Output:** `{BIEN_SO}_{YYYYMMDD_HHMMSS_mmm}_{LOAI_VI_PHAM}.jpg` + `.json`
 
+## Vì sao R01 mượt hơn còn app này bị khựng
+
+Khi đối chiếu trực tiếp với `R01_object_detection`, có 4 nguyên nhân chính làm pipeline hiện tại kém cảm giác realtime hơn:
+
+1. `inference_fps` từng bị đặt bằng `1`, nghĩa là AI chỉ cập nhật đúng 1 lần mỗi giây. Video vẫn chạy, nhưng box detect nhảy theo từng giây nên người xem cảm nhận là giật.
+2. App này từng mở MIPI ở `1920x1080`, trong khi sample R01 trên V2L chạy camera ở `640x480`. Với pipeline hiện tại, điều đó làm tăng rất mạnh chi phí copy, resize, convert và cache miss ở cả capture, inference, display.
+3. Ở đường DRP preprocess, code cũ còn copy thêm toàn bộ tensor FP32 từ `PreRuntime.Pre()` sang `std::vector<float>` trước khi `SetInput()`. R01 không làm bước copy này.
+4. App traffic_violation còn chạy thêm tracker, violation engine, OCR và logger. Vì vậy nếu giữ đầu vào 1080p và giới hạn CPU chưa hợp lý thì độ trễ tích lũy sẽ lộ ra rõ hơn sample.
+
+### Cấu hình khuyến nghị để giữ cảm giác realtime trên V2L
+
+- Dùng `640x480` cho MIPI khi đang debug pipeline realtime.
+- Đặt `inference_fps: 15` hoặc `0` nếu muốn chạy tối đa theo khả năng thực tế của model.
+- Chỉ tăng lên `960x540` hoặc `1280x720` sau khi đã đo ổn định FPS capture và inference.
+- Bật OCR hoặc ghi ảnh/video output sau khi luồng detect cơ bản đã mượt.
+
+Phiên bản hiện tại đã được chỉnh lại theo hướng đó: default config dùng `640x480`, `inference_fps: 15`, bỏ deep copy thừa ở đường inference, và bỏ copy trung gian tensor sau `PreRuntime` để hành vi gần với `R01_object_detection` hơn.
+
 ---
 
 ## Kiến trúc hệ thống

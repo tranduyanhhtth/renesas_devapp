@@ -7,6 +7,7 @@
 #include "common/config.h"
 #include <vector>
 #include <unordered_map>
+#include <opencv2/video/tracking.hpp>
 
 class VehicleTracker {
 public:
@@ -29,10 +30,16 @@ public:
 private:
     static float computeIou(const Box& a, const Box& b);
     VehicleType  classToType(int class_id) const;
+    void initKalman(int track_id, float cx, float cy);
+    cv::Point2f predictCenter(int track_id, const cv::Point2f& fallback);
+    cv::Point2f correctCenter(int track_id, float cx, float cy);
 
     DetectorConfig m_det;
     int   m_max_missed;
     float m_iou_thresh;
+    float m_dist_thresh_px{90.f};
     int   m_next_id{0};
     std::vector<TrackedVehicle> m_tracks;
+    std::unordered_map<int, cv::KalmanFilter> m_kalman;
+    std::unordered_map<int, bool> m_kalman_inited;
 };

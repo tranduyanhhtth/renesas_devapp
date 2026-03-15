@@ -3,6 +3,8 @@
  * Parse config.yaml – single detector model
  ******************************************************************************/
 #include "config.h"
+#include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <fstream>
 #include <sys/stat.h>
@@ -45,16 +47,34 @@ static DetectorConfig parseDetector(const cv::FileNode& d) {
     if (!grids.empty()) c.grids = grids;
     else if (c.model_type == "yolov8") c.grids = {80, 40, 20};
     else                               c.grids = {13, 26, 52};
+
+    if (c.model_type != "yolov8" && c.grids.size() >= 2 && c.grids.front() > c.grids.back()) {
+        std::cerr << "[Config][WARN] grids are in descending order; reversing for YOLO anchored decode\n";
+        std::reverse(c.grids.begin(), c.grids.end());
+    }
+
     auto anchors = nodeFloatList(d["anchors"]);
     if (!anchors.empty()) c.anchors = anchors;
     else if (c.model_type != "yolov8")
         c.anchors = {10,13, 16,30, 33,23, 30,61, 62,45, 59,119, 116,90, 156,198, 373,326};
+
+    if (c.model_type != "yolov8") {
+        const size_t expected = static_cast<size_t>(2 * c.num_bb * c.num_layers);
+        if (c.anchors.size() != expected) {
+            std::cerr << "[Config][WARN] anchors size mismatch (have=" << c.anchors.size()
+                      << ", expected=" << expected
+                      << "). Falling back to standard YOLOv3 layout (num_bb=3).\n";
+            c.num_bb = 3;
+            c.anchors = {10,13, 16,30, 33,23, 30,61, 62,45, 59,119, 116,90, 156,198, 373,326};
+        }
+    }
     c.class_motorbike     = nodeInt(d["class_motorbike"],     0);
     c.class_car           = nodeInt(d["class_car"],           1);
     c.class_truck         = nodeInt(d["class_truck"],         2);
     c.class_bus           = nodeInt(d["class_bus"],           3);
     c.class_person        = nodeInt(d["class_person"],        4);
-    c.class_helmet        = nodeInt(d["class_helmet"],        5);
+    c.class_helmet        = nodeInt(d["class_helmet"],       -1);
+    c.class_no_helmet     = nodeInt(d["class_no_helmet"],    -1);
     c.class_license_plate = nodeInt(d["class_license_plate"], 6);
     return c;
 }
@@ -104,9 +124,20 @@ AppConfig AppConfig::fromFile(const std::string& path) {
     auto vi = fs["video"];
     cfg.video_source_type    = nodeStr  (vi["source_type"], "file");
     cfg.video_source         = nodeStr  (vi["source"], "0");
-    cfg.video_width          = nodeInt  (vi["width"],  1920);
-    cfg.video_height         = nodeInt  (vi["height"], 1080);
-    cfg.video_fps            = nodeInt  (vi["fps"],    30);
+    cfg.video_width          = nodeInt  (vi["width"],  640);
+    cfg.video_height         = nodeInt  (vi["height"], 480);
+    {
+        float fps_cfg = nodeFloat(vi["fps"], 30.f);
+        cfg.video_fps = static_cast<int>(std::lround(fps_cfg));
+        if (std::fabs(fps_cfg - static_cast<float>(cfg.video_fps)) > 0.01f) {
+            std::cout << "[Config][INFO] video.fps=" << fps_cfg
+                      << " -> rounded to " << cfg.video_fps
+                      << " (integer fps is used internally)\n";
+        }
+    }
+    cfg.video_loop           = nodeBool (vi["loop"], true);
+    cfg.video_realtime       = nodeBool (vi["realtime"], true);
+    cfg.inference_fps        = nodeInt  (vi["inference_fps"], 15);
     cfg.gstreamer_pipeline   = nodeStr  (vi["gstreamer_pipeline"]);
     // single detector (model 1)
     cfg.detector = parseDetector(fs["detector"]);
@@ -122,6 +153,7 @@ AppConfig AppConfig::fromFile(const std::string& path) {
     cfg.enable_lp_ocr = nodeBool(fs["enable_lp_ocr"], true);
     // scene
     auto sc = fs["scene"];
+    cfg.scene.calibrated_for_violation = nodeBool(sc["calibrated_for_violation"], false);
     cfg.scene.stop_line_y1 = nodeFloat(sc["stop_line"]["y1"], 0.60f);
     cfg.scene.stop_line_y2 = nodeFloat(sc["stop_line"]["y2"], 0.63f);
     auto tl = sc["traffic_light_roi"];

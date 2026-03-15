@@ -42,7 +42,8 @@ struct DetectorConfig {
     int class_truck         = 2;
     int class_bus           = 3;
     int class_person        = 4;
-    int class_helmet        = 5;
+    int class_helmet        = -1;
+    int class_no_helmet     = -1;
     int class_license_plate = 6;
 
     /* Helper: is class_id a vehicle to track? */
@@ -53,6 +54,7 @@ struct DetectorConfig {
     bool isRider(int c) const { return c == class_person; }
     /* Guard against -1 (class not present in this model, e.g. COCO has no helmet) */
     bool isHelmet(int c) const { return class_helmet        >= 0 && c == class_helmet; }
+    bool isNoHelmet(int c) const { return class_no_helmet   >= 0 && c == class_no_helmet; }
     bool isLP    (int c) const { return class_license_plate >= 0 && c == class_license_plate; }
 };
 
@@ -67,6 +69,9 @@ struct LaneLine {
 };
 
 struct SceneConfig {
+    /* Global gate: only apply traffic-violation rules when this scene
+     * has been calibrated for the current camera/road. */
+    bool  calibrated_for_violation = false;
     float stop_line_y1 = 0.60f;
     float stop_line_y2 = 0.63f;
     RoiF  traffic_light_roi;
@@ -94,17 +99,17 @@ struct OutputConfig {
 /* ─── AppConfig ──────────────────────────────────────────────────────────── */
 struct AppConfig {
     /* Video
-     * source_type: "file"  → video file  (source = /path/to/video.mp4)
-     *              "usb"   → USB camera  (source = /dev/video0 or index "0")
-     *              "mipi"  → MIPI camera (source = /dev/video0, runs media-ctl)
-     *              "rtsp"  → RTSP stream (source = rtsp://ip:port/stream)
-     *              "custom"→ use gstreamer_pipeline verbatim
+     * source_type: "file" → video file  (source = /path/to/video.mp4)
+     *              "mipi" → MIPI camera (source = /dev/video0, runs media-ctl)
      */
     std::string video_source;
-    std::string video_source_type = "file";   /* file | usb | mipi | rtsp | custom */
+    std::string video_source_type = "file";   /* file | mipi */
     int   video_width  = 1920;
     int   video_height = 1080;
     int   video_fps    = 30;
+    bool  video_loop   = true;   /* file source: rewind and continue at EOF */
+    bool  video_realtime = true; /* file source: pace playback to video_fps */
+    int   inference_fps = 0;     /* 0 = max speed, >0 = throttle inference loop */
     std::string gstreamer_pipeline;
 
     /* Single unified detector (Model 1 – traffic violations) */

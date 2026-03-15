@@ -1,147 +1,114 @@
-##############################################################################
-# traffic_violation/config.yaml
-# Tất cả tham số cấu hình – không cần recompile khi thay đổi
-##############################################################################
-
-# ── Video input ──────────────────────────────────────────────────────────────
-# Để switch nguồn video, chỉ cần thay 2 dòng source_type + source:
-#
-#   source_type  |  source                           |  Mô tả
-#   -------------|-----------------------------------|---------------------------
-#   "file"       |  /path/to/video.mp4               |  Video file (test offline)
-#   "mipi"       |  /dev/video0                      |  MIPI CSI-2 trên RZ/V2L
-#                |                                   |  (tự chạy media-ctl init)
+%YAML:1.0
+---
 video:
-  # --- file: chạy thử với video offline ---
-  # source_type: "file"
-  # source: "CarsDrivingUnderBridge.mp4"
-
-  # --- mipi: camera MIPI trực tiếp trên RZ/V2L ---
-  source_type: "mipi"
-  source: "/dev/video0"
-
-  # ===================================================
-  width:  1920
-  height: 1080
-  fps:    30
-  gstreamer_pipeline: ""  
-
-# ── Unified detector (single model trained for all classes) ─────────────────
-# model_type controls post-processing dispatch:
-#   "yolov3" / "yolov5" : anchor-based decode (requires grids + anchors)
-#   "yolov8"            : anchor-free decode  (requires grids, no anchors needed)
-#
-# ── Option A: Custom-trained YOLOv3 (7 classes) ──────────────────────────────
-# detector:
-#   model_type:  "yolov3"
-#   model_dir:   "models/traffic_yolov3"
-#   pre_dir:     "models/traffic_yolov3/preprocess"
-#   label_file:  "models/traffic_yolov3/labels.txt"
-#   input_width:  416
-#   input_height: 416
-#   drpai_freq:   2
-#   conf_threshold: 0.50
-#   nms_threshold:  0.45
-#   num_class:   7
-#   num_bb:      3
-#   num_layers:  3
-#   grids:       [13, 26, 52]
-#   anchors:     [10,13, 16,30, 33,23, 30,61, 62,45, 59,119, 116,90, 156,198, 373,326]
-#   class_motorbike:     0
-#   class_car:           1
-#   class_truck:         2
-#   class_bus:           3
-#   class_person:        4
-#   class_helmet:        5
-#   class_license_plate: 6
-#
-# ── Option B: YOLOv8n COCO 80 classes (dùng model compile sẵn) ──────────────
-# Lưu ý: COCO không có class helmet/license_plate.
-# Dùng YOLOv8n để detect vehicle + person; class_helmet/class_lp đặt -1 để skip.
-# COCO class IDs: person=0, motorbike=3, car=2, bus=5, truck=7
+  source_type: mipi
+  source: /dev/video0
+  width: 640
+  height: 480
+  fps: 30
+  loop: true
+  realtime: true
+  inference_fps: 15
+  gstreamer_pipeline: ''
 detector:
-  model_type:   "yolov8"
-  model_dir:    "models/yolov8n_onnx"
-  pre_dir:      "models/yolov8n_onnx/preprocess"
-  label_file:   "models/yolov8n_onnx/label.txt"
-  input_width:  640
+  model_type: yolov3
+  model_dir: models/yolov3_onnx
+  pre_dir: models/yolov3_onnx/preprocess
+  label_file: models/yolov3_onnx/coco-labels-2014_2017.txt
+  input_width: 416
+  input_height: 416
+  drpai_freq: 2
+  conf_threshold: 0.35
+  nms_threshold: 0.45
+  num_class: 80
+  num_bb: 3
+  num_layers: 3
+  grids:
+    - 13
+    - 26
+    - 52
+  anchors:
+    - 10
+    - 13
+    - 16
+    - 30
+    - 33
+    - 23
+    - 30
+    - 61
+    - 62
+    - 45
+    - 59
+    - 119
+    - 116
+    - 90
+    - 156
+    - 198
+    - 373
+    - 326
+  class_car: 2
+  class_motorbike: 3
+  class_truck: 7
+  class_bus: 5
+  class_person: -1
+  class_license_plate: -1
+detector2:
+  model_type: yolov8
+  model_dir: models/yolov8n_bikehelmet_onnx
+  pre_dir: models/yolov8n_bikehelmet_onnx/preprocess
+  label_file: ''
+  input_width: 640
   input_height: 640
-  drpai_freq:   2
-  conf_threshold: 0.25
-  nms_threshold:  0.45
-  num_class:   80
-  num_bb:      1       # anchor-free – không dùng nhưng cần khai báo
-  num_layers:  3
-  grids:       [80, 40, 20]   # 80²+40²+20² = 8400 anchor points
-  # anchors: không cần cho yolov8
-  # Class IDs theo COCO label order:
-  class_motorbike:     3
-  class_car:           2
-  class_truck:         7
-  class_bus:           5
-  class_person:        0
-  class_helmet:        -1   # không có trong COCO → HelmetRule sẽ skip
-  class_license_plate: -1   # không có trong COCO → LP OCR sẽ skip
-
-# ── LP OCR ────────────────────────────────────────────────────────────────────
+  drpai_freq: 2
+  conf_threshold: 0.35
+  nms_threshold: 0.45
+  num_class: 4
+  num_bb: 3
+  num_layers: 3
+  grids:
+    - 80
+    - 40
+    - 20
+  class_car: -1
+  class_motorbike: 0
+  class_truck: -1
+  class_bus: -1
+  class_person: -1
+  class_helmet: 1
+  class_no_helmet: 2
+  class_license_plate: 3
 enable_lp_ocr: true
-
-# ── DRP-AI hardware ───────────────────────────────────────────────────────────
 drpai:
-  freq_index:  2        # 0=lowest … 3=highest frequency
-  mem_offset:  0
-
-# ── Camera / scene ROI (normalized [0..1] hoặc pixel tuyệt đối) ─────────────
-# Đơn vị: tỉ lệ so với frame (0.0 – 1.0)
+  freq_index: 2
+  mem_offset: 0
 scene:
-  # Stop-line: xe nào vượt qua line này khi đèn đỏ = vi phạm
   stop_line:
-    y1: 0.60     # phía trên stop-line (normalized y)
-    y2: 0.63     # phía dưới stop-line
-
-  # Làn đường cho từng loại xe (normalized x band)
+    y1: 0.5458
+    y2: 0.5658
+  calibrated_for_violation: false
   lane_zones:
-    motorbike: { x_min: 0.00, x_max: 0.50 }
-    car:       { x_min: 0.25, x_max: 0.75 }
-    truck:     { x_min: 0.25, x_max: 1.00 }
-
-  # Vạch phân làn tĩnh – dùng cho rule "đè vạch" (LaneLineRule)
-  # x_norm: vị trí vạch theo chiều ngang frame (0.0=trái, 1.0=phải)
-  # overlap_px: số pixel tối thiểu xe phải đè qua vạch mỗi bên mới tính vi phạm
+    line:
+      x_min: 0.2629
+      x_max: 0.3203
   lane_lines:
-    - { x_norm: 0.33, overlap_px: 10 }   # vạch 1/3 trái
-    - { x_norm: 0.66, overlap_px: 10 }   # vạch 2/3 phải
-
-  # Vùng đèn giao thông (để detect màu đèn bằng HSV)
+    - x_norm: 0.2853
+      overlap_px: 10
   traffic_light_roi:
-    x: 0.80
-    y: 0.05
-    w: 0.08
-    h: 0.20
-
-# ── Violation engine ─────────────────────────────────────────────────────────
+    x: 0.9207
+    y: 0.1479
+    w: 0.0229
+    h: 0.1189
 violation:
-  # Bật / tắt từng rule
   rules:
-    helmet:     true
-    red_light:  true
+    helmet: true
+    red_light: true
     wrong_lane: true
-    lane_line:  true   # đè vạch kẻ đường
-
-  # Khoảng thời gian tối thiểu giữa 2 lần log cùng 1 xe (giây)
+    lane_line: true
   cooldown_sec: 5.0
-
-  # Số frame liên tiếp phải vi phạm mới ghi nhận (tránh false positive)
   confirm_frames: 3
-
-# ── Output ───────────────────────────────────────────────────────────────────
 output:
-  save_dir: "./violations"
-  # Format tên file: {plate}_{datetime}_{violation}.jpg
-  filename_pattern: "{plate}_{datetime}_{violation}"
-  # Save cả frame đầy đủ (true) hay chỉ crop bbox xe (false)
+  save_dir: ./violations
+  filename_pattern: '{plate}_{datetime}_{violation}'
   save_full_frame: true
-  # Ghi metadata JSON song song
   save_json: true
-  # Ghi video annotated output (để trống = không ghi)
-  annotated_video: ""
+  annotated_video: ''

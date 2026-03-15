@@ -9,3 +9,8 @@ convert/repos/
 tvm/build/
 convert/repos/
 __pycache__/
+/data/camera_service_ai/
+/data/Final_project_Jackson/
+/convert/repos/
+/convert/venvs/
+/tvm/

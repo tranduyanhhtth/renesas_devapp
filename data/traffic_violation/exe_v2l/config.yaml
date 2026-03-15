@@ -1,92 +1,129 @@
 %YAML:1.0
 ---
 video:
-  source_type: "file"
-  source: "CarsDrivingUnderBridge.mp4"
-  width:  640
-  height: 480
-  fps:    20
-  gstreamer_pipeline: ""
-
+  source_type: file
+  source: CarsDrivingUnderBridge.mp4
+  width: 1920
+  height: 1080
+  fps: 12.5
+  loop: 1
+  realtime: 1
+  inference_fps: 1
+  gstreamer_pipeline: ''
+  # source_type: mipi
+  # source: /dev/video0
+  # width: 640
+  # height: 480
+  # fps: 30
+  # loop: true
+  # realtime: true
+  # inference_fps: 15
+  # gstreamer_pipeline: ''
 detector:
-  model_type:   "yolov8"
-  model_dir:    "models/yolov8n_onnx"
-  pre_dir:      "models/yolov8n_onnx/preprocess"
-  label_file:   "models/yolov8n_onnx/label.txt"
-  input_width:  640
-  input_height: 640
-  drpai_freq:   2
-  conf_threshold: 0.25
-  nms_threshold:  0.45
-  num_class:   6
-  num_bb:      1
-  num_layers:  3
-  grids:       [80, 40, 20]
-  class_car:           0
-  class_motorbike:     1
-  class_truck:         2
-  class_bus:           3
-  class_person:        4
-  class_helmet:        -1
-  class_license_plate: 5
-
-detector2:
-  model_type:   "yolov8"
-  model_dir:    "models/yolov8n_helmet_onnx"
-  pre_dir:      "models/yolov8n_helmet_onnx/preprocess"
-  label_file:   "models/yolov8n_helmet_onnx/label.txt"
-  input_width:  640
-  input_height: 640
-  drpai_freq:   2
+  model_type: yolov3
+  model_dir: models/yolov3_onnx
+  pre_dir: models/yolov3_onnx/preprocess
+  label_file: models/yolov3_onnx/coco-labels-2014_2017.txt
+  input_width: 416
+  input_height: 416
+  drpai_freq: 2
   conf_threshold: 0.35
-  nms_threshold:  0.45
-  num_class:   4
-  num_bb:      1
-  num_layers:  3
-  grids:       [80, 40, 20]
-  class_car:           -1
-  class_motorbike:     0
-  class_truck:         -1
-  class_bus:           -1
-  class_person:        1
-  class_helmet:        2
+  nms_threshold: 0.45
+  num_class: 80
+  num_bb: 3
+  num_layers: 3
+  grids:
+    - 13
+    - 26
+    - 52
+  anchors:
+    - 10
+    - 13
+    - 16
+    - 30
+    - 33
+    - 23
+    - 30
+    - 61
+    - 62
+    - 45
+    - 59
+    - 119
+    - 116
+    - 90
+    - 156
+    - 198
+    - 373
+    - 326
+  class_car: 2
+  class_motorbike: 3
+  class_truck: 7
+  class_bus: 5
+  class_person: -1
+  class_license_plate: -1
+detector2:
+  model_type: yolov8
+  model_dir: models/yolov8n_bikehelmet_onnx
+  pre_dir: models/yolov8n_bikehelmet_onnx/preprocess
+  label_file: ''
+  input_width: 640
+  input_height: 640
+  drpai_freq: 2
+  conf_threshold: 0.35
+  nms_threshold: 0.45
+  num_class: 4
+  num_bb: 3
+  num_layers: 3
+  grids:
+    - 80
+    - 40
+    - 20
+  class_car: -1
+  class_motorbike: 0
+  class_truck: -1
+  class_bus: -1
+  class_person: -1
+  class_helmet: 1
+  class_no_helmet: 2
   class_license_plate: 3
-
 enable_lp_ocr: 1
-
 drpai:
-  freq_index:  2
-  mem_offset:  0
-
+  freq_index: 2
+  mem_offset: 0
 scene:
+  calibrated_for_violation: false
   stop_line:
-    y1: 0.60
-    y2: 0.63
+    y1: 0.5458
+    y2: 0.5658
   traffic_light_roi:
-    x: 0.80
-    y: 0.05
-    w: 0.08
-    h: 0.20
+    x: 0.9207
+    y: 0.1479
+    w: 0.0229
+    h: 0.1189
   lane_zones:
-    motorbike: { x_min: 0.00, x_max: 0.50 }
-    car:       { x_min: 0.25, x_max: 0.75 }
-    truck:     { x_min: 0.25, x_max: 1.00 }
+    motorbike:
+      x_min: 0.0
+      x_max: 0.5
+    car:
+      x_min: 0.25
+      x_max: 0.75
+    truck:
+      x_min: 0.25
+      x_max: 1.0
   lane_lines:
-    - { x_norm: 0.33, overlap_px: 10 }
-    - { x_norm: 0.66, overlap_px: 10 }
-
+    - x_norm: 0.2853
+      overlap_px: 10
 violation:
   rules:
-    helmet:     0
-    red_light:  1
+    helmet: 1
+    red_light: 1
     wrong_lane: 1
-    lane_line:  1
+    lane_line: 1
   cooldown_sec: 5.0
   confirm_frames: 3
-
 output:
-  save_dir: "./violations"
-  filename_pattern: "{plate}_{datetime}_{violation}"
+  save_dir: ./violations
+  filename_pattern: '{plate}_{datetime}_{violation}'
   save_full_frame: 1
   save_json: 1
-  annotated_video: ""
+  annotated_video: ''

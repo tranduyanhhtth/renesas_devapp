@@ -1,25 +1,9 @@
-/*******************************************************************************
- * traffic_violation/src/main.cpp
- *
- * Multi-threaded pipeline (mirrors R01_object_detection architecture):
- *
- *   R_Capture_Thread                        R_Kbhit_Thread
- *        │                                        │
- *        ▼  g_cap (newest-frame-wins slot)        │ sem_trywait
- *   R_Inf_Thread (DRP-AI + tracker + violations)  │
- *        │                                        │
- *        ▼  g_disp (ready-flag slot)              │
- *   R_Display_Thread (Wayland / imshow)  ←────────┘
- *
- * Synchronisation: sem_t terminate_req_sem (init=1, R01 pattern).
- *   Every thread checks sem value == 1 each iteration.
- *   Any error / key-press → sem_trywait → all threads exit cleanly.
- *
- * Ownership:
- *   g_video     → R_Capture_Thread only
- *   g_detector, g_tracker, g_engine, g_logger, g_vwriter → R_Inf_Thread only
- *   Wayland instance   → R_Display_Thread only  (stack-local)
- ******************************************************************************/
+/* traffic_violation/src/main.cpp
+ * Multi-threaded pipeline:
+ *   R_Capture_Thread → g_cap → R_Inf_Thread → g_disp → R_Display_Thread
+ *                                                ↑ R_Kbhit_Thread
+ * Termination: sem_t terminate_req_sem (init=1); sem_trywait signals global stop.
+ */
 #include <cstdio>
 #include <cstring>
 #include <cerrno>
@@ -28,8 +12,11 @@
 #include <mutex>
 #include <chrono>
 #include <thread>
+#include <cstdlib>
+#include <cmath>
 #include <unistd.h>
 #include <climits>
+#include <set>
 #include <libgen.h>
 #include <pthread.h>
 #include <semaphore.h>
@@ -61,61 +48,51 @@
 #  include "drp/define.h"
 #endif
 
-/* ─────────────────────────────── Constants ─────────────────────────────── */
-/** Poll interval when nothing to do (µs). */
-#define WAIT_TIME          (1000)
-/** LP OCR is run every N inference frames to amortise Tesseract cost. */
-#define LP_OCR_INTERVAL    (10)
-/** FPS print interval (seconds). */
-#define FPS_PRINT_INTERVAL (1.0)
+#define WAIT_TIME          (1000)    /* idle poll interval (µs) */
+#define LP_OCR_INTERVAL    (10)      /* run OCR every N inference frames */
+#define FPS_PRINT_INTERVAL (1.0)     /* seconds between FPS prints */
 
-/* ─────────────────────── Termination semaphore ──────────────────────────
- * Initialised to 1.  All thread loops run while value == 1.
- * sem_trywait() (decrement without blocking) signals global stop. */
-static sem_t terminate_req_sem;
+static sem_t terminate_req_sem;  /* init=1; sem_trywait signals global stop */
 
-/* ─────────────────────────── Thread handles ─────────────────────────────── */
 static pthread_t capture_thread;
 static pthread_t ai_inf_thread;
 static pthread_t display_thread;
 static pthread_t kbhit_thread;
 
-/* ──────────────────────── Inter-thread data slots ───────────────────────
- * "Newest-frame-wins" strategy: producer always overwrites; consumer always
- * reads the latest.  This prevents stale-frame accumulation when DRP-AI
- * inference is slower than capture, which is the common case.            */
+/* Inter-thread data: newest-frame-wins — producer overwrites, consumer reads latest */
 
 /** Capture → Inference slot. */
 struct CaptureSlot {
     cv::Mat          frame;
     std::mutex       mtx;
-    std::atomic<bool> ready{false};   /* true = new frame available */
+    std::atomic<bool> ready{false};      /* true = new frame available for inference */
+    std::atomic<bool> disp_ready{false}; /* true = new frame available for display   */
 };
 static CaptureSlot g_cap;
 
-/** Inference → Display slot. */
+/** Inference → Display slot (latest overlay/result state). */
 struct DisplaySlot {
-    cv::Mat          frame;
+    std::vector<TrackedVehicle> vehicles;
+    std::vector<detection>      dets;
+    std::vector<std::string>    labels;
+    bool                        red_light{false};
+    double                      fps{0.0};
+    float                       prep_ms{0.f};
+    float                       infer_ms{0.f};
+    int                         model_idx{0};
     std::mutex       mtx;
-    std::atomic<bool> ready{false};
+    std::atomic<bool> ready{false};   /* true once first AI result is available */
 };
 static DisplaySlot g_disp;
 
-/* ───────────────────────── Application global state ────────────────────
- * Each pointer is exclusively accessed from one thread after init, so no
- * further synchronisation is needed for the objects themselves.           */
 static AppConfig  g_cfg;
+static constexpr bool kEnableTracking = false;
+static constexpr bool kEnableViolationLogging = false;
 
-/* Active model index: 0 = Model-1 (traffic violations), 1 = Model-2 (helmet) */
-static std::atomic<int> g_active_model{0};
-/* Model-switch request from kbhit thread.  -1 = no request. */
-static std::atomic<int> g_model_req{-1};
-/* DRP-AI base address obtained at startup and used in R_Inf_Thread for reload. */
+static std::atomic<int> g_active_model{0};  /* 0=Model1, 1=Model2 */
+static std::atomic<int> g_model_req{-1};    /* kbhit model-switch request, -1=none */
 static uint64_t         g_drpai_base{0};
-/* DRP-AI file descriptor kept open for the entire app lifetime (mirrors R01).
- * TVM's DrpAiDeviceAPI singleton requires the application to hold an open fd
- * to /dev/drpai0 for the duration of model loading and inference.            */
-static int              g_drpai_fd{-1};
+static int              g_drpai_fd{-1};     /* /dev/drpai0 kept open for app lifetime */
 
 static VideoInput*      g_video        = nullptr;   /* → R_Capture_Thread  */
 static TrafficDetector* g_detector     = nullptr;   /* → R_Inf_Thread      */
@@ -126,6 +103,25 @@ static cv::VideoWriter* g_vwriter      = nullptr;   /* → R_Inf_Thread      */
 static LpValidator*     g_lp_validator = nullptr;   /* → R_Inf_Thread      */
 
 static std::vector<std::pair<std::regex, std::string>> g_lp_regex;
+
+/* For model 2 UI: plate + violation type(s) of currently violating vehicles. */
+static std::vector<std::string> g_model2_violation_lines;
+
+static const DetectorConfig& currentDisplayDetectorConfig(int model_idx)
+{
+    if (model_idx == 1 && g_cfg.detector2_enabled)
+        return g_cfg.detector2;
+    return g_cfg.detector;
+}
+
+static const char* sourceTypeName(SourceType type)
+{
+    switch (type) {
+        case SourceType::FILE: return "FILE";
+        case SourceType::MIPI: return "MIPI";
+        default: return "UNKNOWN";
+    }
+}
 
 /* ═══════════════════════════ Helper functions ═══════════════════════════ */
 
@@ -144,22 +140,91 @@ static std::string resolvePath(const std::string& base, const std::string& p)
     return base + "/" + p;
 }
 
-/* ────── buildViolationRules ─────────────────────────────────────────────
- * (Re-)populate the ViolationEngine rules for a given model index.
- * Called at startup (model_idx=0) and during live model switch.
- * engine->clearRules() is called first so it can be used for both. */
+static bool in01(float v) { return v >= 0.f && v <= 1.f; }
+
+static bool hasValidStopLine(const SceneConfig& sc)
+{
+    return in01(sc.stop_line_y1) && in01(sc.stop_line_y2) &&
+           (sc.stop_line_y2 > sc.stop_line_y1);
+}
+
+static bool hasValidTrafficLightRoi(const SceneConfig& sc)
+{
+    const auto& r = sc.traffic_light_roi;
+    return in01(r.x) && in01(r.y) && in01(r.w) && in01(r.h) &&
+           (r.w > 0.f) && (r.h > 0.f) && (r.x + r.w <= 1.f) && (r.y + r.h <= 1.f);
+}
+
+static bool hasValidLaneZones(const SceneConfig& sc)
+{
+    for (const auto& key : {"motorbike", "car", "truck"}) {
+        auto it = sc.lane_zones.find(key);
+        if (it == sc.lane_zones.end()) continue;
+        const auto& z = it->second;
+        if (in01(z.x_min) && in01(z.x_max) && z.x_max > z.x_min) return true;
+    }
+    return false;
+}
+
+static bool hasValidLaneLines(const SceneConfig& sc)
+{
+    if (sc.lane_lines.empty()) return false;
+    for (const auto& ll : sc.lane_lines) {
+        if (in01(ll.x_norm) && ll.overlap_px > 0) return true;
+    }
+    return false;
+}
+
+static bool isReasonableBox(const Box& b, int fw, int fh)
+{
+    if (!std::isfinite(b.x) || !std::isfinite(b.y) ||
+        !std::isfinite(b.w) || !std::isfinite(b.h)) return false;
+    if (b.w < 2.f || b.h < 2.f) return false;
+    /* Accept large boxes and rely on toSafeRect clipping when drawing.
+     * Reject only obviously invalid magnitudes to avoid overflow artifacts. */
+    if (b.w > fw * 4.f || b.h > fh * 4.f) return false;
+    return true;
+}
+
+static void ensureWaylandRuntimeEnv()
+{
+    const char* xdg = std::getenv("XDG_RUNTIME_DIR");
+    if (xdg != nullptr && xdg[0] != '\0') return;
+
+    struct stat st;
+    const char* fallback = "/run/user/0";
+    if (stat(fallback, &st) == 0 && S_ISDIR(st.st_mode)) {
+        setenv("XDG_RUNTIME_DIR", fallback, 0);
+        printf("[Main] XDG_RUNTIME_DIR not set -> using %s\n", fallback);
+    }
+}
+
+/* Populate ViolationEngine rules for the given model index.  Clears existing rules first. */
 static void buildViolationRules(ViolationEngine* engine, int model_idx,
                                 const AppConfig& cfg)
 {
     engine->clearRules();
     if (model_idx == 0) {
+        if (!cfg.scene.calibrated_for_violation) {
+            printf("[Rules] Scene not calibrated -> traffic-violation rules disabled\n");
+            return;
+        }
         /* Model 1: traffic-violation rules */
-        if (cfg.violation.red_light)
+        if (cfg.violation.red_light &&
+            hasValidStopLine(cfg.scene) && hasValidTrafficLightRoi(cfg.scene))
             engine->addRule(std::make_shared<RedLightRule>(cfg.scene));
-        if (cfg.violation.wrong_lane)
+        else if (cfg.violation.red_light)
+            printf("[Rules] Skip RedLightRule: stop_line/traffic_light_roi invalid\n");
+
+        if (cfg.violation.wrong_lane && hasValidLaneZones(cfg.scene))
             engine->addRule(std::make_shared<WrongLaneRule>(cfg.scene));
-        if (cfg.violation.lane_line && !cfg.scene.lane_lines.empty())
+        else if (cfg.violation.wrong_lane)
+            printf("[Rules] Skip WrongLaneRule: lane_zones invalid\n");
+
+        if (cfg.violation.lane_line && hasValidLaneLines(cfg.scene))
             engine->addRule(std::make_shared<LaneLineRule>(cfg.scene));
+        else if (cfg.violation.lane_line)
+            printf("[Rules] Skip LaneLineRule: lane_lines invalid/empty\n");
     } else {
         /* Model 2: helmet-detection rules */
         if (cfg.violation.helmet)
@@ -167,7 +232,6 @@ static void buildViolationRules(ViolationEngine* engine, int model_idx,
     }
 }
 
-/* ────────────────── Traffic-light HSV detection ──────────────────────── */
 static TrafficLightState detectTrafficLight(const cv::Mat& frame,
                                              const SceneConfig& scene)
 {
@@ -212,27 +276,125 @@ static std::string runLpOcr(const cv::Mat& frame, const cv::Rect& lp_rect)
     return g_lp_validator->format_plate(lp);
 }
 
+static std::vector<std::string> collectModel2ViolationLines(
+    const cv::Mat& frame,
+    const std::vector<detection>& dets,
+    const DetectorConfig& det_cfg,
+    bool red_light,
+    bool run_ocr_this_frame)
+{
+    std::vector<std::string> lines;
+    if (frame.empty()) return lines;
+
+    const int fw = frame.cols;
+    const int fh = frame.rows;
+    std::set<std::string> dedup;
+
+    for (const auto& veh : dets) {
+        if (veh.prob == 0.f || !det_cfg.isVehicle(veh.c)) continue;
+        if (!isReasonableBox(veh.bbox, fw, fh)) continue;
+
+        bool lane_line_violation = false;
+        bool red_light_violation = false;
+
+        if (g_cfg.violation.lane_line && hasValidLaneLines(g_cfg.scene)) {
+            float x_left  = veh.bbox.x - veh.bbox.w / 2.f;
+            float x_right = veh.bbox.x + veh.bbox.w / 2.f;
+            for (const auto& ll : g_cfg.scene.lane_lines) {
+                float x_line = ll.x_norm * (float)fw;
+                float left_overlap  = x_line - x_left;
+                float right_overlap = x_right - x_line;
+                if (left_overlap >= (float)ll.overlap_px &&
+                    right_overlap >= (float)ll.overlap_px)
+                {
+                    lane_line_violation = true;
+                    break;
+                }
+            }
+        }
+
+        if (g_cfg.violation.red_light && red_light && hasValidStopLine(g_cfg.scene)) {
+            float bottom_y = veh.bbox.y + veh.bbox.h / 2.f;
+            float y2_px = g_cfg.scene.stop_line_y2 * (float)fh;
+            red_light_violation = (bottom_y <= y2_px);
+        }
+
+        if (!lane_line_violation && !red_light_violation) continue;
+
+        std::string plate = "LP?";
+        if (g_cfg.enable_lp_ocr && run_ocr_this_frame && det_cfg.isLP(det_cfg.class_license_plate)) {
+            float best_inter = 0.f;
+            cv::Rect best_lp;
+            for (const auto& lp : dets) {
+                if (lp.prob == 0.f || !det_cfg.isLP(lp.c)) continue;
+                if (!isReasonableBox(lp.bbox, fw, fh)) continue;
+                float inter = lp.bbox.intersectArea(veh.bbox);
+                if (inter < lp.bbox.w * lp.bbox.h * 0.2f) continue;
+                cv::Rect lp_rect = lp.bbox.toSafeRect(fw, fh);
+                if (lp_rect.area() < 100) continue;
+                if (inter > best_inter) {
+                    best_inter = inter;
+                    best_lp = lp_rect;
+                }
+            }
+            if (best_lp.area() > 0) {
+                std::string ocr = runLpOcr(frame, best_lp);
+                if (!ocr.empty()) plate = ocr;
+            }
+        }
+
+        std::string reason;
+        if (red_light_violation) reason += "RED_LIGHT";
+        if (lane_line_violation) {
+            if (!reason.empty()) reason += "+";
+            reason += "LANE_LINE";
+        }
+        std::string line = plate + " | " + reason;
+        if (dedup.insert(line).second) lines.push_back(line);
+    }
+    return lines;
+}
+
 /* ──────────────────────────── Draw overlay ───────────────────────────── */
 static void drawOverlay(cv::Mat& frame,
     const std::vector<TrackedVehicle>& vehicles,
     const std::vector<detection>&      dets,
+    const std::vector<std::string>&    labels,
+    int model_idx,
     bool red_light, double fps)
 {
     const int fw = frame.cols, fh = frame.rows;
+    const auto& det_cfg = currentDisplayDetectorConfig(model_idx);
+    const int raw_box_thickness = (model_idx == 1) ? 2 : 1;
     /* Raw detections (thin box) */
     for (const auto& d : dets) {
         if (d.prob == 0.f || !d.bbox.isValid()) continue;
+
+        bool draw_det = false;
+        if (model_idx == 1) {
+            /* Model 2: draw all detections from post-process so UI always matches Detected count. */
+            draw_det = true;
+        } else {
+            draw_det = (det_cfg.isVehicle(d.c) || det_cfg.isHelmet(d.c) ||
+                        det_cfg.isNoHelmet(d.c) || det_cfg.isLP(d.c));
+        }
+        if (!draw_det) continue;
+
         cv::Rect r = d.bbox.toSafeRect(fw, fh);
         if (r.area() <= 0) continue;
+
         cv::Scalar col(180, 180, 180);
-        if      (g_cfg.detector.isVehicle(d.c)) col = cv::Scalar(0, 220, 0);
-        else if (g_cfg.detector.isHelmet(d.c))  col = cv::Scalar(255, 200, 0);
-        else if (g_cfg.detector.isLP(d.c))      col = cv::Scalar(0, 200, 255);
-        cv::rectangle(frame, r, col, 1);
-        const auto& lbs = g_detector->labels();
-        if (d.c >= 0 && d.c < (int)lbs.size())
-            cv::putText(frame, lbs[d.c], {r.x, std::max(r.y - 3, 12)},
-                        cv::FONT_HERSHEY_SIMPLEX, 0.4, col, 1);
+        if      (det_cfg.isVehicle(d.c)) col = cv::Scalar(0, 220, 0);
+        else if (det_cfg.isHelmet(d.c))  col = cv::Scalar(255, 200, 0);
+        else if (det_cfg.isNoHelmet(d.c)) col = cv::Scalar(0, 0, 255);
+        else if (det_cfg.isLP(d.c))      col = cv::Scalar(0, 200, 255);
+        cv::rectangle(frame, r, col, raw_box_thickness);
+        if (d.c >= 0 && d.c < (int)labels.size()) {
+            char txt[96];
+            std::snprintf(txt, sizeof(txt), "%s %.2f", labels[d.c].c_str(), d.prob);
+            cv::putText(frame, txt, {r.x, std::max(r.y - 3, 12)},
+                        cv::FONT_HERSHEY_SIMPLEX, 0.45, col, raw_box_thickness);
+        }
     }
     /* Tracked vehicles (thick box + label) */
     for (const auto& v : vehicles) {
@@ -242,39 +404,179 @@ static void drawOverlay(cv::Mat& frame,
                            ? cv::Scalar(0, 255, 0) : cv::Scalar(255, 200, 0);
         cv::rectangle(frame, r, color, 2);
         std::string lbl = "T" + std::to_string(v.track_id);
-        if (!v.plate.empty())                              lbl += " " + v.plate;
-        if (v.type == VehicleType::MOTORBIKE && !v.has_helmet) lbl += " [NO HELMET]";
+        if (!v.plate.empty())                                           lbl += " " + v.plate;
+        if (model_idx == 1 && v.type == VehicleType::MOTORBIKE && !v.has_helmet)
+            lbl += " [NO HELMET]";  /* only Model 2 has helmet detection */
         cv::putText(frame, lbl, {r.x, r.y - 5},
                     cv::FONT_HERSHEY_SIMPLEX, 0.5, color, 1);
     }
     /* Traffic-light indicator */
     cv::Scalar tl_col = red_light ? cv::Scalar(0, 0, 255) : cv::Scalar(0, 200, 0);
-    cv::circle(frame, {frame.cols - 30, 30}, 15, tl_col, cv::FILLED);
-    cv::putText(frame, red_light ? "RED" : "GO ",
-                {frame.cols - 55, 70},
-                cv::FONT_HERSHEY_SIMPLEX, 0.6, tl_col, 2);
-    /* FPS */
-    cv::putText(frame, "FPS:" + std::to_string((int)fps),
-                {10, 30}, cv::FONT_HERSHEY_SIMPLEX, 0.8,
-                cv::Scalar(0, 255, 255), 2);
+    // cv::circle(frame, {frame.cols - 30, 30}, 15, tl_col, cv::FILLED);
+    // cv::putText(frame, red_light ? "RED" : "GO ",
+    //             {frame.cols - 55, 70},
+    //             cv::FONT_HERSHEY_SIMPLEX, 0.6, tl_col, 2);
+    // /* FPS */
+    // cv::putText(frame, "FPS:" + std::to_string((int)fps),
+    //             {10, 30}, cv::FONT_HERSHEY_SIMPLEX, 0.8,
+    //             cv::Scalar(0, 255, 255), 2);
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
- *                            THREAD FUNCTIONS
- * ═══════════════════════════════════════════════════════════════════════════ */
+/* Pre-computed display geometry — computed once, reused every frame.
+ * All buffers are allocated BEFORE the display loop to eliminate
+ * per-frame heap alloc/free (160 MB/s @ 20fps) which caused jitter. */
+struct DisplayGeom {
+    int panel_w, video_w;
+    int rw, rh, ox, oy;  /* resize target & letterbox offsets */
+};
+static DisplayGeom computeDisplayGeom(int src_w, int src_h) {
+    DisplayGeom g;
+    g.panel_w = std::min(320, IMAGE_OUTPUT_WIDTH / 3);
+    g.video_w = IMAGE_OUTPUT_WIDTH - g.panel_w;
+    double sx = (double)g.video_w / src_w;
+    double sy = (double)IMAGE_OUTPUT_HEIGHT / src_h;
+    double s  = std::min(sx, sy);
+    g.rw = std::max(1, (int)(src_w * s));
+    g.rh = std::max(1, (int)(src_h * s));
+    g.ox = (g.video_w - g.rw) / 2;
+    g.oy = (IMAGE_OUTPUT_HEIGHT - g.rh) / 2;
+    return g;
+}
 
-/*
- * R_Capture_Thread
- * ─────────────────
- * Reads the latest frame from the video source (VideoInput drives its own
- * internal grab-loop; getFrame() is non-blocking and thread-safe).
- * Writes into g_cap using newest-frame-wins: old unconsumed frames are silently
- * overwritten so that R_Inf_Thread always works on a fresh image.
- */
+/* renderToCanvas — writes one display frame into caller-supplied pre-allocated buffers.
+ *
+ * Design (camera_service_ai RK3568 in-place overlay pattern):
+ *   canvas  pre-allocated 1280×720 BGR  — reused every frame, NO malloc/memset
+ *   bgra    pre-allocated 1280×720 BGRA — reused every frame, NO malloc/memset
+ *   src     camera frame taken BY VALUE so caller can std::move(tmp) in → O(1)
+ *
+ * Per-frame memory ops eliminated vs old composeDisplayFrame:
+ *   • cv::Mat canvas(1280×720, Scalar(20,20,20)) — was 2.76 MB memset/frame
+ *   • cv::Mat bgra from cvtColor                 — was 3.58 MB malloc/frame
+ *   • passing src by value at call site           — was 1.23 MB memcpy/frame
+ * Total saved: ~7.6 MB × 25 fps = ~190 MB/s of cache-thrashing eliminated.
+ *
+ * Only the video ROI and right panel are repainted each call; the dark-gray
+ * letterbox bars (if any) are filled ONCE at startup and left unchanged.    */
+static void renderToCanvas(
+    cv::Mat&                            canvas,   /* 1280×720 BGR  pre-alloc IN/OUT */
+    cv::Mat&                            bgra,     /* 1280×720 BGRA pre-alloc OUT    */
+    cv::Mat&                            src,      /* camera frame — mutable in-place (no copy) */
+    const DisplayGeom&                  geom,
+    const std::vector<TrackedVehicle>&  vehicles,
+    const std::vector<detection>&       dets,
+    const std::vector<std::string>&     labels,
+    const std::vector<std::string>&     model2_violation_lines,
+    int model_idx, bool red_light,
+    double infer_fps, double capture_fps,
+    float prep_ms, float infer_ms)
+{
+    /* 1. Draw AI overlay on src in-place (src is our local copy, safe to modify) */
+    drawOverlay(src, vehicles, dets, labels, model_idx, red_light, infer_fps);
+
+    /* 2. Copy/resize into canvas video ROI — no intermediate allocation.
+     * When capture resolution == display resolution (common: 960×540 → 960×540),
+     * copyTo skips the full resize interpolation pipeline (~4 ms saved).      */
+    {
+        auto roi = canvas(cv::Rect(geom.ox, geom.oy, geom.rw, geom.rh));
+        if (src.cols == geom.rw && src.rows == geom.rh)
+            src.copyTo(roi);
+        else
+            cv::resize(src, roi, cv::Size(geom.rw, geom.rh), 0, 0, cv::INTER_LINEAR);
+    }
+
+    /* 3. Repaint letterbox bars (small regions, only if source is not 4:3) */
+    if (geom.oy > 0) {
+        canvas(cv::Rect(0, 0, geom.video_w, geom.oy))
+              .setTo(cv::Scalar(20, 20, 20));
+        int bot_y = geom.oy + geom.rh;
+        int bot_h = IMAGE_OUTPUT_HEIGHT - bot_y;
+        if (bot_h > 0)
+            canvas(cv::Rect(0, bot_y, geom.video_w, bot_h))
+                  .setTo(cv::Scalar(20, 20, 20));
+    }
+
+    /* 4. Right-panel background — setTo on 320×720 (0.44MB, but no malloc) */
+    canvas(cv::Rect(geom.video_w, 0, geom.panel_w, IMAGE_OUTPUT_HEIGHT))
+          .setTo(cv::Scalar(35, 35, 35));
+    cv::line(canvas, cv::Point(geom.video_w, 0),
+             cv::Point(geom.video_w, IMAGE_OUTPUT_HEIGHT),
+             cv::Scalar(90, 90, 90), 2);
+
+    /* 5. Right-panel text */
+    int y = 36;
+    const int x  = geom.video_w + 16;
+    const int lh = 28;
+    auto put = [&](const std::string& s, cv::Scalar c,
+                   double scale = 0.62, int thick = 1) {
+        cv::putText(canvas, s, {x, y}, cv::FONT_HERSHEY_SIMPLEX, scale, c, thick);
+        y += lh;
+    };
+    put("TRAFFIC VIOLATION", cv::Scalar(0, 220, 255), 0.70, 2);
+    y += 6;
+    put(std::string("Source: ") + sourceTypeName(sourceTypeFromString(g_cfg.video_source_type)),
+        cv::Scalar(230,230,230));
+    put("Model : " + std::to_string(model_idx + 1), cv::Scalar(230,230,230));
+    put("Cfg   : " + std::to_string(g_cfg.video_width) + "x" +
+        std::to_string(g_cfg.video_height) + " @" +
+        std::to_string(g_cfg.video_fps) + "fps", cv::Scalar(210,210,210), 0.54);
+    put("InfLim: " + std::to_string(g_cfg.inference_fps), cv::Scalar(210,210,210), 0.54);
+    put("Cap FPS: " + cv::format("%.1f", capture_fps), cv::Scalar(180,255,180));
+    put("Inf FPS: " + cv::format("%.1f", infer_fps),   cv::Scalar(0,255,255));
+    put("Prep ms: " + cv::format("%.1f", prep_ms),     cv::Scalar(200,200,255));
+    put("Inf ms : " + cv::format("%.1f", infer_ms),    cv::Scalar(200,200,255));
+    put(std::string("Light  : ") + (red_light ? "RED" : "GO"),
+        red_light ? cv::Scalar(0,0,255) : cv::Scalar(0,220,0));
+    put(std::string("Track : ") + (kEnableTracking ? "ON" : "OFF"), cv::Scalar(230,230,230));
+    y += 10;
+    put("Detected:", cv::Scalar(255, 220, 0), 0.62, 2);
+    std::map<std::string, int> counts;
+    for (const auto& d : dets) {
+        if (d.prob == 0.f) continue;
+        std::string name = (d.c >= 0 && d.c < (int)labels.size())
+            ? labels[d.c] : ("cls_" + std::to_string(d.c));
+        counts[name]++;
+    }
+    if (counts.empty()) {
+        put("(none)", cv::Scalar(170,170,170));
+    } else {
+        for (const auto& kv : counts) {
+            put("- " + kv.first + ": " + std::to_string(kv.second),
+                cv::Scalar(220,220,220), 0.54);
+            if (y > IMAGE_OUTPUT_HEIGHT - 80) break;
+        }
+    }
+    if (model_idx == 1) {
+        y += 10;
+        put("Violation LP (M2):", cv::Scalar(255, 220, 0), 0.62, 2);
+        if (model2_violation_lines.empty()) {
+            put("(none)", cv::Scalar(170,170,170), 0.54);
+        } else {
+            for (const auto& line : model2_violation_lines) {
+                put("- " + line, cv::Scalar(220,220,220), 0.52);
+                if (y > IMAGE_OUTPUT_HEIGHT - 110) break;
+            }
+        }
+    }
+    y = std::max(y + 12, IMAGE_OUTPUT_HEIGHT - 92);
+    put("Keys:", cv::Scalar(255, 220, 0), 0.62, 2);
+    put("1: Model 1",  cv::Scalar(220,220,220), 0.54);
+    put("2: Model 2",  cv::Scalar(220,220,220), 0.54);
+    put("other: Exit", cv::Scalar(220,220,220), 0.54);
+
+    /* BGR→BGRA for wayland.commit() */
+    cv::cvtColor(canvas, bgra, cv::COLOR_BGR2BGRA);
+}
+
+
+/* ── Thread functions ── */
+
+/* Reads latest frame from VideoInput; writes to g_cap (newest-frame-wins). */
 void* R_Capture_Thread(void* /*threadid*/)
 {
     int32_t sem_check = 0;
     int8_t  ret       = 0;
+    uint64_t last_published_seq = UINT64_MAX; /* force first publish */
 
     printf("[Capture] Thread started\n");
 
@@ -294,19 +596,30 @@ void* R_Capture_Thread(void* /*threadid*/)
         }
         if (1 != sem_check) goto capture_end;
 
-        cv::Mat frame;
-        if (!g_video->getFrame(frame) || frame.empty()) {
-            if (!g_video->isOpen()) goto capture_end;
-            usleep(WAIT_TIME);
-            continue;
-        }
-
-        /* Newest-frame-wins write */
         {
-            std::lock_guard<std::mutex> lk(g_cap.mtx);
-            g_cap.frame = std::move(frame);
+            uint64_t cur_seq = g_video->frameSeq();
+            if (cur_seq == last_published_seq) {
+                usleep(WAIT_TIME);
+                if (!g_video->isOpen()) goto capture_end;
+                continue;
+            }
+
+            cv::Mat frame;
+            if (!g_video->getFrame(frame) || frame.empty()) {
+                if (!g_video->isOpen()) goto capture_end;
+                usleep(WAIT_TIME);
+                continue;
+            }
+
+            last_published_seq = cur_seq;
+
+            {
+                std::lock_guard<std::mutex> lk(g_cap.mtx);
+                g_cap.frame = std::move(frame);
+            }
+            g_cap.ready.store(true);
+            g_cap.disp_ready.store(true);
         }
-        g_cap.ready.store(true);
     }
 
 err:
@@ -320,23 +633,7 @@ capture_end:
     pthread_exit(NULL);
 }
 
-/*
- * R_Inf_Thread
- * ─────────────
- * Core AI pipeline, running in a single dedicated thread so DRP-AI
- * (PreRuntime + LoadModel/Run) never contends with display or capture:
- *
- *   1  Read frame from g_cap
- *   2  DRP-AI inference (TrafficDetector::detect)  ← slowest step
- *   3  Tracker update
- *   4  Helmet association (motorbike ↔ helmet box)
- *   5  LP OCR every LP_OCR_INTERVAL frames
- *   6  Traffic-light HSV test
- *   7  Violation evaluation + logging
- *   8  Draw overlay on annotated frame
- *   9  Optional video-file write
- *  10  Push annotated frame → g_disp
- */
+/* AI pipeline: capture frame → DRP-AI detect → publish display metadata */
 void* R_Inf_Thread(void* /*threadid*/)
 {
     int32_t sem_check = 0;
@@ -345,12 +642,15 @@ void* R_Inf_Thread(void* /*threadid*/)
 
     auto   t_fps    = std::chrono::steady_clock::now();
     double loop_fps = 0.0;
+    const int infer_fps_limit = g_cfg.inference_fps;
+    const auto infer_interval = std::chrono::microseconds(
+        (infer_fps_limit > 0) ? (1000000 / infer_fps_limit) : 0);
+    auto next_infer_tp = std::chrono::steady_clock::now();
 
     printf("[Inference] Thread started\n");
 
     while (1)
     {
-        /* ── Termination check ──────────────────────────────────────────── */
         errno = 0;
         ret   = sem_getvalue(&terminate_req_sem, &sem_check);
         if (0 != ret) {
@@ -358,19 +658,24 @@ void* R_Inf_Thread(void* /*threadid*/)
             goto err;
         }
         if (1 != sem_check) goto inf_end;
-        /* ── Model-switch requested by kbhit thread? ─────────────────────── */
+
+        if (g_cfg.inference_fps < 0) { usleep(50000); continue; }
+
+        /* Model-switch requested by kbhit thread? */
         {
             int req = g_model_req.exchange(-1);
             if (req >= 0 && req != g_active_model.load()) {
                 printf("[Inference] Switching to Model %d...\n", req + 1);
                 const DetectorConfig& dcfg =
                     (req == 0) ? g_cfg.detector : g_cfg.detector2;
-                /* Tear down current detector/tracker; keep engine/logger. */
+                /* Tear down current detector; tracking/logger are optional. */
                 delete g_detector;  g_detector = nullptr;
                 delete g_tracker;   g_tracker  = nullptr;
                 g_detector = new TrafficDetector(dcfg);
-                g_tracker  = new VehicleTracker(dcfg, 6, 0.35f);
-                buildViolationRules(g_engine, req, g_cfg);
+                if (kEnableTracking)
+                    g_tracker = new VehicleTracker(dcfg, 6, 0.35f);
+                if (g_engine)
+                    buildViolationRules(g_engine, req, g_cfg);
                 if (!g_detector->load(g_drpai_base + DRPAI_MEM_OFFSET)) {
                     fprintf(stderr, "[Inference][ERROR] Model %d load failed\n", req + 1);
                     goto err;
@@ -380,81 +685,82 @@ void* R_Inf_Thread(void* /*threadid*/)
                        req + 1, dcfg.model_dir.c_str());
             }
         }
-        /* ── Wait for new frame ─────────────────────────────────────────── */
+        /* Rate limiter */
+        if (infer_fps_limit > 0) {
+            auto now = std::chrono::steady_clock::now();
+            if (now < next_infer_tp)
+                std::this_thread::sleep_until(next_infer_tp);
+        }
+
         if (!g_cap.ready.load()) { usleep(WAIT_TIME); continue; }
 
         cv::Mat frame;
         {
             std::lock_guard<std::mutex> lk(g_cap.mtx);
             if (g_cap.frame.empty()) { g_cap.ready.store(false); continue; }
-            frame = g_cap.frame.clone();   /* own a copy for this iteration */
+            frame = std::move(g_cap.frame);
             g_cap.ready.store(false);
         }
+        if (infer_fps_limit > 0)
+            next_infer_tp = std::chrono::steady_clock::now() + infer_interval;
+
         ++frame_idx;
 
-        /* ── 1. DRP-AI inference ─────────────────────────────────────────── */
-        auto dets = g_detector->detect(frame);
+        const DetectorConfig& active_det_cfg =
+            currentDisplayDetectorConfig(g_active_model.load());
 
-        /* ── 2. Tracker update ───────────────────────────────────────────── */
-        const auto& tracks = g_tracker->update(dets, frame.cols, frame.rows);
-
-        /* ── 3. Helmet association ───────────────────────────────────────── */
-        for (const auto& v : tracks) {
-            if (v.type != VehicleType::MOTORBIKE) continue;
-            bool found = false;
-            for (const auto& d : dets) {
-                if (!g_cfg.detector.isHelmet(d.c) || d.prob == 0.f) continue;
-                float inter = d.bbox.intersectArea(v.bbox);
-                if (inter > d.bbox.w * d.bbox.h * 0.3f)
-                    { found = true; break; }
-            }
-            g_tracker->setHelmet(v.track_id, found);
+        /* 1. DRP-AI inference */
+        std::vector<detection> dets;
+        try {
+            dets = g_detector->detect(frame);
+        } catch (const std::exception& e) {
+            fprintf(stderr, "[Inference][WARN] detect() threw: %s — skipping frame\n", e.what());
+            continue;
+        } catch (...) {
+            fprintf(stderr, "[Inference][WARN] detect() threw unknown exception — skipping frame\n");
+            continue;
         }
 
-        /* ── 4. LP OCR (amortised) ───────────────────────────────────────── */
-        if (g_cfg.enable_lp_ocr && (frame_idx % LP_OCR_INTERVAL == 0)) {
-            for (const auto& v : tracks) {
-                if (!v.plate.empty()) continue;
-                for (const auto& d : dets) {
-                    if (!g_cfg.detector.isLP(d.c) || d.prob == 0.f) continue;
-                    float inter = d.bbox.intersectArea(v.bbox);
-                    if (inter < d.bbox.w * d.bbox.h * 0.2f) continue;
-                    cv::Rect lbox = d.bbox.toSafeRect(frame.cols, frame.rows);
-                    if (lbox.area() < 100) continue;
-                    std::string plate = runLpOcr(frame, lbox);
-                    if (!plate.empty()) { g_tracker->setPlate(v.track_id, plate); break; }
-                }
-            }
-        }
-
-        /* ── 5. Traffic-light state ──────────────────────────────────────── */
+        /* 2. Traffic-light state */
         TrafficLightState light = detectTrafficLight(frame, g_cfg.scene);
 
-        /* ── 6. Violation evaluation ──────────────────────────────────────── */
-        FrameContext ctx;
-        ctx.frame        = frame;
-        ctx.frame_ts_sec = frame_idx / (double)g_cfg.video_fps;
-        ctx.vehicles     = g_tracker->tracks();
-        ctx.light        = light;
+        std::vector<TrackedVehicle> disp_vehicles;
+        if (kEnableTracking && g_tracker) {
+            disp_vehicles = g_tracker->update(dets, frame.cols, frame.rows);
+        }
 
-        for (const auto& ev : g_engine->process(ctx))
-            g_logger->log(ev);
+        std::vector<std::string> model2_lines;
+        if (g_active_model.load() == 1) {
+            bool run_ocr_this_frame = (frame_idx % LP_OCR_INTERVAL == 0);
+            model2_lines = collectModel2ViolationLines(frame, dets, active_det_cfg,
+                                                       light.red, run_ocr_this_frame);
+        }
 
-        /* ── 7. Overlay ──────────────────────────────────────────────────── */
-        drawOverlay(ctx.frame, ctx.vehicles, dets, light.red, loop_fps);
-
-        /* ── 8. Optional video-file write ───────────────────────────────── */
-        if (g_vwriter && g_vwriter->isOpened())
-            g_vwriter->write(ctx.frame);
-
-        /* ── 9. Push to display slot ─────────────────────────────────────── */
+        /* 3. Publish to display thread */
+        std::vector<std::string> labels_snapshot = g_detector->labels();
         {
             std::lock_guard<std::mutex> lk(g_disp.mtx);
-            g_disp.frame = std::move(ctx.frame);
+            g_disp.vehicles  = disp_vehicles;
+            g_disp.dets      = dets;
+            g_disp.labels    = labels_snapshot;
+            g_model2_violation_lines = model2_lines;
+            g_disp.red_light = light.red;
+            g_disp.fps       = loop_fps;
+            g_disp.prep_ms   = g_detector->lastPrepMs();
+            g_disp.infer_ms  = g_detector->lastInferMs();
+            g_disp.model_idx = g_active_model.load();
         }
         g_disp.ready.store(true);
 
-        /* ── 10. FPS accounting ─────────────────────────────────────────── */
+        /* 4. Optional video-file write */
+        if (g_vwriter && g_vwriter->isOpened()) {
+            cv::Mat annotated = frame.clone();
+            drawOverlay(annotated, disp_vehicles, dets, labels_snapshot,
+                        g_active_model.load(), light.red, loop_fps);
+            g_vwriter->write(annotated);
+        }
+
+        /* 5. FPS accounting */
         {
             auto now = std::chrono::steady_clock::now();
             double sec = std::chrono::duration<double>(now - t_fps).count();
@@ -468,6 +774,7 @@ void* R_Inf_Thread(void* /*threadid*/)
                        g_detector->lastInferMs());
             }
         }
+
     }
 
 err:
@@ -475,23 +782,23 @@ err:
     goto inf_end;
 
 inf_end:
-    g_logger->flush();
-    g_disp.ready.store(true);   /* unblock display thread */
+    if (g_logger && kEnableViolationLogging) g_logger->flush();
     printf("[Inference] Thread terminated\n");
     pthread_exit(NULL);
 }
 
-/*
- * R_Display_Thread
- * ─────────────────
- * Decoupled from inference so slow Wayland commit / imshow does not stall
- * DRP-AI.  On WITH_DRP: resize → BGRA → wayland.commit().
- * On CPU-only builds: cv::imshow (ESC to quit).
- */
+/* Renders latest frame + AI overlay to Wayland (WITH_DRP) or cv::imshow. */
 void* R_Display_Thread(void* /*threadid*/)
 {
     int32_t sem_check = 0;
     int8_t  ret       = 0;
+
+    /* Pre-compute display geometry (integers only, no Mat allocation) */
+    const DisplayGeom geom = computeDisplayGeom(g_cfg.video_width, g_cfg.video_height);
+
+    /* Declare empty (unallocated) — actual create() happens after Wayland init */
+    cv::Mat canvas;
+    cv::Mat bgra;
 
     printf("[Display] Thread started\n");
 
@@ -507,6 +814,26 @@ void* R_Display_Thread(void* /*threadid*/)
            IMAGE_OUTPUT_WIDTH, IMAGE_OUTPUT_HEIGHT);
 #endif
 
+    canvas.create(IMAGE_OUTPUT_HEIGHT, IMAGE_OUTPUT_WIDTH, CV_8UC3);
+    bgra.create  (IMAGE_OUTPUT_HEIGHT, IMAGE_OUTPUT_WIDTH, CV_8UC4);
+    canvas.setTo(cv::Scalar(20, 20, 20));
+    cv::cvtColor(canvas, bgra, cv::COLOR_BGR2BGRA);
+
+    {
+    /* Vsync-driven loop: wayland.commit() blocks on eglSwapBuffers (~60 Hz).  Re-render
+     * only when VideoInput produces a new frame seq; otherwise re-commit existing bgra. */
+    uint64_t last_disp_seq = UINT64_MAX;
+    cv::Mat tmp;
+
+    using Clock = std::chrono::steady_clock;
+    using Ms    = std::chrono::duration<double, std::milli>;
+    auto   t_last_disp_frame = Clock::now();
+    double disp_max_gap_ms   = 0.0;
+    int    disp_jitter_count = 0;
+    int    disp_frame_count  = 0;
+    double commit_max_ms     = 0.0;
+    auto   t_stats           = Clock::now();
+
     while (1)
     {
         errno = 0;
@@ -517,29 +844,79 @@ void* R_Display_Thread(void* /*threadid*/)
         }
         if (1 != sem_check) goto disp_end;
 
-        if (!g_disp.ready.load()) { usleep(WAIT_TIME); continue; }
-
-        cv::Mat frame;
         {
-            std::lock_guard<std::mutex> lk(g_disp.mtx);
-            frame = g_disp.frame.clone();
-            g_disp.ready.store(false);
+            uint64_t cur_seq = g_video ? g_video->frameSeq() : 0;
+            if (cur_seq != last_disp_seq) {
+                auto   t_now_disp = Clock::now();
+                double gap_ms     = Ms(t_now_disp - t_last_disp_frame).count();
+                t_last_disp_frame = t_now_disp;
+                if (gap_ms > disp_max_gap_ms) disp_max_gap_ms = gap_ms;
+                if (gap_ms > 70.0) {   /* > 1.5× nominal 40ms + 1 vsync */
+                    // fprintf(stderr, "[DISP][JITTER] frame_gap=%.0fms\n", gap_ms);
+                    ++disp_jitter_count;
+                }
+                ++disp_frame_count;
+
+                if (g_video && g_video->getFrame(tmp) && !tmp.empty()) {
+                    std::vector<TrackedVehicle> vehicles;
+                    std::vector<detection> dets;
+                    std::vector<std::string> labels;
+                    std::vector<std::string> model2_lines;
+                    bool red_light = false;
+                    double fps = 0.0;
+                    float prep_ms = 0.f, infer_ms = 0.f;
+                    int model_idx = 0;
+                    if (g_disp.ready.load()) {
+                        std::lock_guard<std::mutex> lk(g_disp.mtx);
+                        vehicles  = g_disp.vehicles;
+                        dets      = g_disp.dets;
+                        labels    = g_disp.labels;
+                        model2_lines = g_model2_violation_lines;
+                        red_light = g_disp.red_light;
+                        fps       = g_disp.fps;
+                        prep_ms   = g_disp.prep_ms;
+                        infer_ms  = g_disp.infer_ms;
+                        model_idx = g_disp.model_idx;
+                    }
+                    renderToCanvas(canvas, bgra, tmp, geom,
+                                   vehicles, dets, labels, model2_lines,
+                                   model_idx, red_light, fps,
+                                   g_video ? g_video->fpsMeasured() : 0.0,
+                                   prep_ms, infer_ms);
+                    last_disp_seq = cur_seq;
+                }
+            }
         }
-        if (frame.empty()) continue;
 
 #ifdef WITH_DRP
         {
-            cv::Mat bgra, resized;
-            cv::cvtColor(frame, bgra, cv::COLOR_BGR2BGRA);
-            cv::resize(bgra, resized,
-                       cv::Size(IMAGE_OUTPUT_WIDTH, IMAGE_OUTPUT_HEIGHT));
-            wayland.commit(resized.data, NULL);
+            auto   t_c0     = Clock::now();
+            wayland.commit(bgra.data, NULL);
+            double c_ms     = Ms(Clock::now() - t_c0).count();
+            if (c_ms > commit_max_ms) commit_max_ms = c_ms;
+            if (c_ms > 40.0) {
+                // fprintf(stderr, "[DISP][VSYNC_SLOW] commit=%.0fms\n", c_ms);
+            }
+        }
+        {
+            double secs = Ms(Clock::now() - t_stats).count() / 1000.0;
+            if (secs >= 1.0) {
+                // printf("[DISP] new_frames/s=%d  max_gap=%.0fms  jitter=%d  commit_max=%.0fms\n",
+                //        disp_frame_count, disp_max_gap_ms, disp_jitter_count, commit_max_ms);
+                fflush(stdout);
+                disp_frame_count  = 0;
+                disp_max_gap_ms   = 0.0;
+                disp_jitter_count = 0;
+                commit_max_ms     = 0.0;
+                t_stats           = Clock::now();
+            }
         }
 #else
-        cv::imshow("Traffic Violation - ESC to quit", frame);
-        if (cv::waitKey(1) == 27) { printf("[Display] ESC pressed\n"); goto err; }
+        cv::imshow("Traffic Violation - ESC to quit", canvas);
+        if (cv::waitKey(16) == 27) { printf("[Display] ESC pressed\n"); goto err; }
 #endif
     }
+    } /* end vsync-driven display block */
 
 err:
     sem_trywait(&terminate_req_sem);
@@ -555,13 +932,7 @@ disp_end:
     pthread_exit(NULL);
 }
 
-/*
- * R_Kbhit_Thread
- * ───────────────
- * Non-blocking ENTER-key detection (identical pattern to R01_object_detection).
- * Sets stdin O_NONBLOCK, polls with WAIT_TIME sleep.
- * Key press → sem_trywait → all threads exit their next loop iteration.
- */
+/* Non-blocking key detection: '1'/'2' for model switch, other → stop */
 void* R_Kbhit_Thread(void* /*threadid*/)
 {
     int32_t sem_check = 0;
@@ -630,11 +1001,18 @@ key_end:
     pthread_exit(NULL);
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
- *                                 main()
- * ═══════════════════════════════════════════════════════════════════════════ */
 int main(int argc, char* argv[])
 {
+    setbuf(stdout, NULL);
+    setbuf(stderr, NULL);
+
+    ensureWaylandRuntimeEnv();
+
+    /* Demote OMX decoders — they share mmngr CMA with DRP-AI and conflict */
+    setenv("GST_PLUGIN_FEATURE_RANK",
+           "omxh264dec:0,omxh265dec:0,omxvp8dec:0,omxvp9dec:0,omxav1dec:0",
+           1 /* overwrite */);
+
     int8_t  ret_main       = 0;
     int32_t sem_create     = -1;
     int32_t create_kbhit   = -1;
@@ -642,23 +1020,20 @@ int main(int argc, char* argv[])
     int32_t create_inf     = -1;
     int32_t create_display = -1;
 
-    /* ── 1. Load config ──────────────────────────────────────────────────── */
+    /* 1. Load config */
     const std::string base = exeDir();
     std::string config_path = (argc > 1)
                               ? std::string(argv[1])
                               : resolvePath(base, "config.yaml");
 
-    /* If config not found next to the binary, fall back to cwd */
     {
         struct stat _st;
         if (argc == 1 && stat(config_path.c_str(), &_st) != 0) {
             config_path = "config.yaml";
-            fprintf(stderr, "[Main] config.yaml not found next to binary – "
-                            "trying cwd\n");
+            fprintf(stderr, "[Main] config.yaml not found next to binary – trying cwd\n");
         }
     }
 
-    /* Print paths BEFORE loading so the user sees them even if load crashes */
     printf("[Main] Exe dir  : %s\n", base.c_str());
     printf("[Main] Config   : %s\n", config_path.c_str());
     fflush(stdout);
@@ -679,36 +1054,19 @@ int main(int argc, char* argv[])
     printf("[Main] Input    : %dx%d  fps=%d\n",
            g_cfg.video_width, g_cfg.video_height, g_cfg.video_fps);
 
-    /* ── 2. DRP-AI base address ──────────────────────────────────────────── */
-    /* Declared here (before any goto) to avoid "crosses initialization" error */
+    /* 2. DRP-AI base address */
     uint64_t drpai_base = 0;
+#ifndef DRPAI_MEM_OFFSET
+#   define DRPAI_MEM_OFFSET  (0x38E0000UL)  /* PreRuntime + TVM model offset */
+#endif
 
-    /* DRP-AI memory layout (R01_object_detection V2L pattern):
-     *   [drpai_base + 0             ]  PreRuntime data (auto-loaded by PreRuntime::Load)
-     *   [drpai_base + DRPAI_MEM_OFFSET]  TVM main model (deploy.json/.so/.params)
-     * Without the offset both regions overlap → PreRuntime DRPAI_START hangs. */
-#   define DRPAI_MEM_OFFSET  (0x38E0000UL)
-
-    /* Guard: if config failed to load, model_dir will be empty which causes
-     * TVM to attempt loading "/deploy.so" and crash.  Exit cleanly instead. */
     if (g_cfg.detector.model_dir.empty()) {
-        fprintf(stderr, "[Main][ERROR] model_dir is empty - config did not load.\n");
-        fprintf(stderr, "             Verify '%s' is a valid ASCII-only YAML file.\n",
-                config_path.c_str());
-        fprintf(stderr, "             OpenCV 4.1.0 FileStorage rejects UTF-8 characters\n"
-                        "             in YAML files (comments included).\n");
+        fprintf(stderr, "[Main][ERROR] model_dir empty — config.yaml not loaded.\n");
         ret_main = -1;
         goto end_main;
     }
 
 #ifdef WITH_DRP
-    /* Open /dev/drpai0 and keep it open for the ENTIRE app lifetime.
-     * TVM's DrpAiDeviceAPI singleton (DrpAiDeviceAPI, MERADRPRuntime) requires
-     * an open application-level fd to /dev/drpai0 while LoadModel/SetInput/Run
-     * are active.  Closing the fd before LoadModel — as done by the original
-     * code — causes get_input() to SIGSEGV inside TVM on first inference.
-     * This mirrors R01_object_detection_yolov8 which closes drpai_fd only at
-     * end_close_drpai (after all threads are joined).                          */
     g_drpai_fd = open("/dev/drpai0", O_RDWR);
     if (g_drpai_fd < 0) {
         fprintf(stderr, "[Main][ERROR] Cannot open /dev/drpai0: %s\n", strerror(errno));
@@ -724,15 +1082,17 @@ int main(int argc, char* argv[])
     }
     printf("[Main] DRP-AI fd=%d  base: 0x%lx  model offset: 0x%lx\n",
            g_drpai_fd, (unsigned long)drpai_base, (unsigned long)DRPAI_MEM_OFFSET);
-    /* NOTE: g_drpai_fd is NOT closed here — closed at end_cleanup after threads join */
 #endif
     g_drpai_base = drpai_base;   /* expose for R_Inf_Thread model-switch reload */
 
-    /* ── 3. Construct pipeline objects ──────────────────────────────────── */
+    /* 3. Construct pipeline objects */
     g_detector     = new TrafficDetector(g_cfg.detector);
-    g_tracker      = new VehicleTracker(g_cfg.detector, 6, 0.35f);
-    g_engine       = new ViolationEngine(g_cfg.violation);
-    g_logger       = new ViolationLogger(g_cfg.output);
+    if (kEnableTracking)
+        g_tracker  = new VehicleTracker(g_cfg.detector, 6, 0.35f);
+    if (kEnableTracking || kEnableViolationLogging)
+        g_engine   = new ViolationEngine(g_cfg.violation);
+    if (kEnableViolationLogging)
+        g_logger   = new ViolationLogger(g_cfg.output);
     g_lp_regex     = create_lp_regex_list();
     g_lp_validator = new LpValidator();
     g_video        = new VideoInput(g_cfg.video_source,
@@ -740,9 +1100,10 @@ int main(int argc, char* argv[])
                                     g_cfg.video_width, g_cfg.video_height,
                                     g_cfg.video_fps,
                                     g_cfg.gstreamer_pipeline,
-                                    /* loop_file= */ false);
+                                        g_cfg.video_loop,
+                                        g_cfg.video_realtime);
 
-    buildViolationRules(g_engine, 0, g_cfg);   /* load model-1 rules */
+    if (g_engine) buildViolationRules(g_engine, 0, g_cfg);   /* load model-1 rules */
 
     if (!g_cfg.output.annotated_video.empty()) {
         g_vwriter = new cv::VideoWriter(
@@ -752,19 +1113,19 @@ int main(int argc, char* argv[])
             cv::Size(g_cfg.video_width, g_cfg.video_height));
     }
 
-    /* ── 4. Load DRP-AI model ────────────────────────────────────────────── */
-    /* Pass (base + DRPAI_MEM_OFFSET) so TVM model memory does not overlap
-     * with PreRuntime's memory region (same as R01 V2L: drpaimem_addr_start+offset). */
-    /* PreRuntime is disabled; pass plain drpai_base without offset — same as R01
-     * which passes drpaimem_addr_start directly.  When PreRuntime is re-enabled
-     * the PreRuntime takes [base, base+DRPAI_MEM_OFFSET) and TVM gets base+offset. */
-    if (!g_detector->load(drpai_base + DRPAI_MEM_OFFSET)) {
-        fprintf(stderr, "[Main][ERROR] TrafficDetector::load() failed\n");
-        ret_main = -1;
-        goto end_cleanup;
+    /* 4. Load DRP-AI model (skip when inference_fps < 0) */
+    if (g_cfg.inference_fps >= 0) {
+        if (!g_detector->load(drpai_base + DRPAI_MEM_OFFSET)) {
+            fprintf(stderr, "[Main][ERROR] TrafficDetector::load() failed\n");
+            ret_main = -1;
+            goto end_cleanup;
+        }
+    } else {
+        printf("[Main] Inference disabled (inference_fps=%d) — skipping model load\n",
+               g_cfg.inference_fps);
     }
 
-    /* ── 5. Termination semaphore (init = 1) ─────────────────────────────── */
+    /* 5. Termination semaphore */
     sem_create = sem_init(&terminate_req_sem, 0, 1);
     if (0 != sem_create) {
         fprintf(stderr, "[Main][ERROR] sem_init failed\n");
@@ -772,13 +1133,7 @@ int main(int argc, char* argv[])
         goto end_cleanup;
     }
 
-    /* ── 6. Launch threads ───────────────────────────────────────────────── */
-    /*
-     * Launch order: Kbhit first (user can abort early at any time),
-     * then Capture (producer), then Inference (consumer/producer),
-     * then Display (final consumer) – ensures no consumer starts
-     * before its producer is ready.
-     */
+    /* 6. Launch threads */
     create_kbhit = pthread_create(&kbhit_thread, NULL, R_Kbhit_Thread, NULL);
     if (0 != create_kbhit) {
         fprintf(stderr, "[Main][ERROR] Failed to create KbHit thread\n");
@@ -816,11 +1171,7 @@ int main(int argc, char* argv[])
         printf("  '2' → switch to Model 2 (helmet detection)\n");
     printf("  any other key → stop\n");
 
-    /* ── 7. Join threads ─────────────────────────────────────────────────── */
-    /*
-     * Join in reverse-dependency order (consumer first so graceful shutdown):
-     *   Display ← Inference ← Capture ← Kbhit
-     */
+    /* 7. Join threads */
 end_threads:
     if (0 == create_display) { pthread_join(display_thread, NULL); printf("[Main] Display   joined\n"); }
     if (0 == create_inf)     { pthread_join(ai_inf_thread,  NULL); printf("[Main] Inference joined\n"); }
@@ -829,7 +1180,7 @@ end_threads:
 
     if (0 == sem_create) sem_destroy(&terminate_req_sem);
 
-    /* ── 8. Release resources ────────────────────────────────────────────── */
+    /* 8. Release resources */
 end_cleanup:
     if (g_vwriter)      { g_vwriter->release(); delete g_vwriter;  g_vwriter      = nullptr; }
     delete g_lp_validator; g_lp_validator = nullptr;
@@ -838,7 +1189,6 @@ end_cleanup:
     delete g_engine;       g_engine       = nullptr;
     delete g_tracker;      g_tracker      = nullptr;
     delete g_detector;     g_detector     = nullptr;
-    /* Close DRP-AI driver fd — mirrors R01 end_close_drpai */
     if (g_drpai_fd >= 0) {
         close(g_drpai_fd);
         g_drpai_fd = -1;

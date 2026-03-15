@@ -11,6 +11,7 @@
 #include <cmath>
 #include <climits>
 #include <cfloat>
+#include <thread>
 
 /* ── helper: FP16 → FP32 (giống R01 dùng builtin) ──────────────────────────── */
 #ifdef WITH_DRP
@@ -51,6 +52,9 @@ TrafficDetector::TrafficDetector(const DetectorConfig& cfg)
 /* ── load ─────────────────────────────────────────────────────────────────── */
 bool TrafficDetector::load(uint64_t drpai_base_addr)
 {
+    constexpr int kLoadRetryCount = 3;
+    constexpr auto kLoadRetryDelay = std::chrono::milliseconds(1000);
+
     /* Load label file */
     if (!m_cfg.label_file.empty()) {
         std::ifstream f(m_cfg.label_file);
@@ -78,10 +82,21 @@ bool TrafficDetector::load(uint64_t drpai_base_addr)
      *   preruntime.Load(pre_dir)  → then  runtime.LoadModel(model_dir, addr)  */
     m_pre_ok = false;
     if (!m_cfg.pre_dir.empty()) {
-        int ret = m_preruntime.Load(m_cfg.pre_dir);
+        int ret = -1;
+        for (int attempt = 1; attempt <= kLoadRetryCount; ++attempt) {
+            ret = m_preruntime.Load(m_cfg.pre_dir);
+            if (ret == 0) break;
+            std::cerr << "[TrafficDetector] PreRuntime Load attempt "
+                      << attempt << "/" << kLoadRetryCount
+                      << " failed (pre_dir=" << m_cfg.pre_dir
+                      << ") ret=" << ret << "\n";
+            if (attempt < kLoadRetryCount)
+                std::this_thread::sleep_for(kLoadRetryDelay);
+        }
         if (ret != 0) {
             std::cerr << "[TrafficDetector] PreRuntime Load failed (pre_dir="
-                      << m_cfg.pre_dir << ") ret=" << ret << "\n";
+                      << m_cfg.pre_dir << ") ret=" << ret
+                      << " -> fallback to CPU preprocessing\n";
             m_pre_ok = false;
             /* Fall back to CPU preproc – non-fatal */
         } else {
@@ -109,7 +124,25 @@ bool TrafficDetector::load(uint64_t drpai_base_addr)
     }
 
     /* ── DRP-AI TVM Runtime ─────────────────────────────────────────────────── */
-    bool ok = m_runtime.LoadModel(m_cfg.model_dir, drpai_base_addr);
+    bool ok = false;
+    for (int attempt = 1; attempt <= kLoadRetryCount; ++attempt) {
+        try {
+            ok = m_runtime.LoadModel(m_cfg.model_dir, drpai_base_addr);
+        } catch (const std::exception& e) {
+            std::cerr << "[TrafficDetector] LoadModel attempt "
+                      << attempt << "/" << kLoadRetryCount
+                      << " threw exception: " << e.what() << "\n";
+            ok = false;
+        } catch (...) {
+            std::cerr << "[TrafficDetector] LoadModel attempt "
+                      << attempt << "/" << kLoadRetryCount
+                      << " threw unknown exception\n";
+            ok = false;
+        }
+        if (ok) break;
+        if (attempt < kLoadRetryCount)
+            std::this_thread::sleep_for(kLoadRetryDelay);
+    }
     if (!ok) {
         std::cerr << "[TrafficDetector] LoadModel failed: " << m_cfg.model_dir << "\n";
         m_runtime_ok = false;
@@ -335,6 +368,7 @@ std::vector<detection> TrafficDetector::detect(const cv::Mat& frame)
     if (!m_runtime_ok) return dets;
 
     auto t0 = std::chrono::steady_clock::now();
+    m_prep_ms = 0.f;
 
     /* ── Preprocessing ──────────────────────────────────────────────────────── */
     if (m_pre_ok && m_drpai_buf)
@@ -346,25 +380,22 @@ std::vector<detection> TrafficDetector::detect(const cv::Mat& frame)
          *      it does the resize to model input size (640x640) internally.
          *   2. Flush CPU cache so physical address is coherent
          *   3. Pass: phy_addr, pre_in_shape_w=frame.cols, pre_in_shape_h=frame.rows */
-        /* ── R01 pattern: pad frame to SQUARE before DMA copy ────────────────
-         * The PreRuntime binary is compiled with PRE_IN_W = PRE_IN_H =
-         * input_width (640×640).  R01 does the same: it calls
-         *   cv::vconcat(640×480_frame, 160×640_black_pad, 640×640_result)
-         * before memcpy.  Passing height=480 to Pre() gives it wrong input
-         * shape → outputs raw uint8 (not FP32) → SetInput over-reads buffer
-         * → SIGSEGV.  Always set pre_in_shape_h = input_width (square). */
-        const int   sq   = m_cfg.input_width;          /* target square side */
-        const int   padr = sq - frame.rows;            /* rows of black pad  */
-        cv::Mat padded;
-        if (padr > 0) {
-            cv::Mat pad(padr, frame.cols, frame.type(), cv::Scalar(0, 0, 0));
-            cv::vconcat(frame, pad, padded);
-        } else {
-            padded = frame;    /* already square (or taller) */
-        }
-        const size_t copy_bytes = std::min(
-            (size_t)padded.total() * padded.elemSize(), (size_t)m_drpai_buf->size);
-        memcpy(m_drpai_buf->mem, padded.data, copy_bytes);
+        /* ── Resize frame to sq×sq before DMA copy ────────────────────────────
+         * The PreRuntime binary expects pre_in_shape_w=sq, pre_in_shape_h=sq
+         * (640×640).  DMA buffer = sq×sq×3 bytes.  Row stride must be sq×3.
+         *
+         * OLD pad approach produced stride 960×3=2880 bytes/row while PreRuntime
+         * expected 640×3=1920 bytes/row → corrupted input → zero detections.
+         *
+         * FIX: cv::resize to sq×sq so stride = sq×3 exactly.
+         * postProcessYolov8 applies scale_x=frame.cols/sq, scale_y=frame.rows/sq
+         * to map boxes back to frame pixel space → aspect-ratio compensated.   */
+        auto tp = std::chrono::steady_clock::now();
+        const int sq = m_cfg.input_width;
+        cv::Mat sq_frame;
+        cv::resize(frame, sq_frame, cv::Size(sq, sq), 0, 0, cv::INTER_LINEAR);
+        /* sq_frame: sq×sq BGR, stride = sq*3 bytes — exactly what PreRuntime needs */
+        memcpy(m_drpai_buf->mem, sq_frame.data, (size_t)sq * sq * 3);
 
         int fr = buffer_flush_dmabuf(m_drpai_buf->idx, m_drpai_buf->size);
         if (fr != 0)
@@ -379,6 +410,8 @@ std::vector<detection> TrafficDetector::detect(const cv::Mat& frame)
         void*    out_ptr  = nullptr;
         uint32_t out_size = 0;
         uint8_t r = m_preruntime.Pre(&pre_param, &out_ptr, &out_size);
+        m_prep_ms = std::chrono::duration<float, std::milli>(
+                    std::chrono::steady_clock::now() - tp).count();
         if (r != 0 || out_ptr == nullptr) {
             /* PreRuntime failed → fall back to CPU */
             std::cerr << "[TrafficDetector] PreRuntime.Pre failed (r=" << (int)r
@@ -387,11 +420,8 @@ std::vector<detection> TrafficDetector::detect(const cv::Mat& frame)
             cpuPreprocess(frame, cpu_in);
             m_runtime.SetInput(0, cpu_in.data());
         } else {
-            /* Pass PreRuntime FP32 output directly to TVM SetInput */
-            const size_t num_floats = (size_t)out_size;
-            const float* fp_ptr = reinterpret_cast<const float*>(out_ptr);
-            std::vector<float> cpu_in(fp_ptr, fp_ptr + num_floats);
-            m_runtime.SetInput(0, cpu_in.data());
+            /* Match R01_object_detection: avoid an extra FP32 tensor copy here. */
+            m_runtime.SetInput(0, reinterpret_cast<float*>(out_ptr));
         }
     }
     else
