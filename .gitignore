@@ -1,16 +1,24 @@
 *.so
 *.pt
+
+__pycache__/
 tvm/build/
 data/traffic_violation/build/
-__pycache__/
-convert/repos/
-*.so
-*.pt
-tvm/build/
-convert/repos/
-__pycache__/
-/data/camera_service_ai/
+
+# Local data/workspaces
+/data/yolo11/
 /data/Final_project_Jackson/
 /convert/repos/
 /convert/venvs/
 /tvm/
+
+# Generated model export/compile artifacts (large)
+convert/output/
+tutorials/temp/
+tutorials/yolov3_onnx/
+tutorials/yolov8n_bikehelmet_onnx/
+
+# Large local test media
+data/traffic_violation/*.mp4
+data/traffic_violation/*.avi
+data/rzv_ai_sdk/R01_object_detection/exe_v2l/*.avi

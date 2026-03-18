@@ -83,8 +83,8 @@ drpai:
   mem_offset: 0
 scene:
   stop_line:
-    y1: 0.5458
-    y2: 0.5658
+    y1: 0.6741
+    y2: 0.6941
   calibrated_for_violation: false
   lane_zones:
     line:
@@ -94,10 +94,10 @@ scene:
     - x_norm: 0.2853
       overlap_px: 10
   traffic_light_roi:
-    x: 0.9207
-    y: 0.1479
-    w: 0.0229
-    h: 0.1189
+    x: 0.9197
+    y: 0.1445
+    w: 0.0258
+    h: 0.124
 violation:
   rules:
     helmet: true

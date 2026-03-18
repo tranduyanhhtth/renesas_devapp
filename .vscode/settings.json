@@ -1,3 +1,5 @@
 {
-    "cmake.sourceDirectory": "/drp-ai_tvm/apps"
+    "cmake.sourceDirectory": "/drp-ai_tvm/apps",
+    "github.copilot.chat.claudeAgent.enabled": true,
+    "github.copilot.chat.claudeAgent.allowDangerouslySkipPermissions": false
 }

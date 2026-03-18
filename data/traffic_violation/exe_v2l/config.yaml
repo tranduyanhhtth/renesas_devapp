@@ -10,15 +10,6 @@ video:
   realtime: 1
   inference_fps: 1
   gstreamer_pipeline: ''
-  # source_type: mipi
-  # source: /dev/video0
-  # width: 640
-  # height: 480
-  # fps: 30
-  # loop: true
-  # realtime: true
-  # inference_fps: 15
-  # gstreamer_pipeline: ''
 detector:
   model_type: yolov3
   model_dir: models/yolov3_onnx
@@ -93,13 +84,13 @@ drpai:
 scene:
   calibrated_for_violation: false
   stop_line:
-    y1: 0.5458
-    y2: 0.5658
+    y1: 0.6741
+    y2: 0.6941
   traffic_light_roi:
-    x: 0.9207
-    y: 0.1479
-    w: 0.0229
-    h: 0.1189
+    x: 0.9197
+    y: 0.1445
+    w: 0.0258
+    h: 0.124
   lane_zones:
     motorbike:
       x_min: 0.0

@@ -14,6 +14,7 @@
 #include <thread>
 #include <cstdlib>
 #include <cmath>
+#include <algorithm>
 #include <unistd.h>
 #include <climits>
 #include <set>
@@ -51,6 +52,7 @@
 #define WAIT_TIME          (1000)    /* idle poll interval (µs) */
 #define LP_OCR_INTERVAL    (10)      /* run OCR every N inference frames */
 #define FPS_PRINT_INTERVAL (1.0)     /* seconds between FPS prints */
+#define LP_OCR_DEBUG       (1)       /* verbose OCR pipeline log */
 
 static sem_t terminate_req_sem;  /* init=1; sem_trywait signals global stop */
 
@@ -106,6 +108,8 @@ static std::vector<std::pair<std::regex, std::string>> g_lp_regex;
 
 /* For model 2 UI: plate + violation type(s) of currently violating vehicles. */
 static std::vector<std::string> g_model2_violation_lines;
+/* For model 1 UI: list of currently red-light violating vehicles (optionally OCR plate). */
+static std::vector<std::string> g_redlight_violation_lines;
 
 static const DetectorConfig& currentDisplayDetectorConfig(int model_idx)
 {
@@ -175,6 +179,43 @@ static bool hasValidLaneLines(const SceneConfig& sc)
     return false;
 }
 
+enum class RedLineState {
+    NONE = 0,
+    TOUCH = 1,
+    CROSS = 2,
+};
+
+/* RED-line violation in current frame:
+ * - Only consider objects in/coming from lower half of frame.
+ * - TOUCH: bbox overlaps stop-line band [y1, y2]
+ * - CROSS: bbox bottom goes above/at y2
+ * This keeps stationary objects that are standing on the red line. */
+static RedLineState getRedLineStateNow(const Box& b, int frame_h, const SceneConfig& sc)
+{
+    const float y1_px = sc.stop_line_y1 * (float)frame_h;
+    const float y2_px = sc.stop_line_y2 * (float)frame_h;
+    const float lower_half_y = 0.5f * (float)frame_h;
+
+    const float top_y = b.y - b.h / 2.f;
+    const float bottom_y = b.y + b.h / 2.f;
+    const float center_y = b.y;
+
+    const bool from_lower_half = (center_y >= lower_half_y) || (bottom_y >= lower_half_y);
+    if (!from_lower_half) return RedLineState::NONE;
+
+    const bool touching = (top_y <= y2_px) && (bottom_y >= y1_px);
+    const bool crossed  = (bottom_y <= y2_px);
+
+    if (crossed) return RedLineState::CROSS;
+    if (touching) return RedLineState::TOUCH;
+    return RedLineState::NONE;
+}
+
+static bool isRedLineViolationNow(const Box& b, int frame_h, const SceneConfig& sc)
+{
+    return getRedLineStateNow(b, frame_h, sc) != RedLineState::NONE;
+}
+
 static bool isReasonableBox(const Box& b, int fw, int fh)
 {
     if (!std::isfinite(b.x) || !std::isfinite(b.y) ||
@@ -184,6 +225,24 @@ static bool isReasonableBox(const Box& b, int fw, int fh)
      * Reject only obviously invalid magnitudes to avoid overflow artifacts. */
     if (b.w > fw * 4.f || b.h > fh * 4.f) return false;
     return true;
+}
+
+/* Estimate a plausible plate ROI from vehicle bbox when LP class is unavailable.
+ * Uses the lower-middle region of the vehicle box (common LP location). */
+static cv::Rect estimatePlateRectFromVehicle(const Box& veh_box, int fw, int fh)
+{
+    cv::Rect vr = veh_box.toSafeRect(fw, fh);
+    if (vr.area() <= 0) return cv::Rect();
+
+    int rw = std::max(24, (int)(vr.width * 0.60f));
+    int rh = std::max(16, (int)(vr.height * 0.24f));
+    int rx = vr.x + (vr.width - rw) / 2;
+    int ry = vr.y + (int)(vr.height * 0.62f);
+
+    cv::Rect guess(rx, ry, rw, rh);
+    guess &= cv::Rect(0, 0, fw, fh);
+    if (guess.area() < 100) return cv::Rect();
+    return guess;
 }
 
 static void ensureWaylandRuntimeEnv()
@@ -242,14 +301,34 @@ static TrafficLightState detectTrafficLight(const cv::Mat& frame,
         (int)(r.x * frame.cols), (int)(r.y * frame.rows),
         (int)(r.w * frame.cols), (int)(r.h * frame.rows));
     roi &= cv::Rect(0, 0, frame.cols, frame.rows);
-    if (roi.area() < 4) return st;
+    if (roi.area() < 16) return st;
+
     cv::Mat hsv;
     cv::cvtColor(frame(roi), hsv, cv::COLOR_BGR2HSV);
-    cv::Mat m1, m2, red_mask;
-    cv::inRange(hsv, cv::Scalar(  0, 120, 70), cv::Scalar( 10, 255, 255), m1);
-    cv::inRange(hsv, cv::Scalar(160, 120, 70), cv::Scalar(180, 255, 255), m2);
+
+    /* Small traffic lights often occupy a tiny part of ROI.
+     * Use lower red area threshold + red-vs-green dominance for robustness. */
+    cv::Mat m1, m2, red_mask, green_mask;
+    cv::inRange(hsv, cv::Scalar(  0, 100, 60), cv::Scalar( 12, 255, 255), m1);
+    cv::inRange(hsv, cv::Scalar(168, 100, 60), cv::Scalar(180, 255, 255), m2);
     cv::bitwise_or(m1, m2, red_mask);
-    st.red = (cv::countNonZero(red_mask) > roi.area() * 0.05f);
+    cv::inRange(hsv, cv::Scalar( 35,  70, 50), cv::Scalar( 95, 255, 255), green_mask);
+
+    cv::medianBlur(red_mask, red_mask, 3);
+    cv::medianBlur(green_mask, green_mask, 3);
+
+    const double roi_area = (double)roi.area();
+    const double red_count = (double)cv::countNonZero(red_mask);
+    const double green_count = (double)cv::countNonZero(green_mask);
+    const double red_ratio = red_count / std::max(1.0, roi_area);
+    const double green_ratio = green_count / std::max(1.0, roi_area);
+    const double red_dominance = red_count / (green_count + 1.0);
+
+    const bool red_by_ratio = (red_ratio >= 0.010);
+    const bool red_by_dominance = (red_ratio >= 0.006) && (red_dominance >= 1.25);
+    const bool not_green_dominant = !(green_ratio >= 0.010 && green_count > red_count * 1.15);
+
+    st.red = (red_by_ratio || red_by_dominance) && not_green_dominant;
     return st;
 }
 
@@ -257,23 +336,86 @@ static TrafficLightState detectTrafficLight(const cv::Mat& frame,
 /* Uses global g_lp_regex / g_lp_validator – called only from R_Inf_Thread */
 static std::string runLpOcr(const cv::Mat& frame, const cv::Rect& lp_rect)
 {
+    static int s_ocr_call_id = 0;
+    const int call_id = ++s_ocr_call_id;
+
     cv::Rect safe = lp_rect & cv::Rect(0, 0, frame.cols, frame.rows);
-    if (safe.area() < 100) return "";
+    if (safe.area() < 100) {
+#if LP_OCR_DEBUG
+        printf("[OCR] #%d skip: roi too small area=%d\n", call_id, safe.area());
+#endif
+        return "";
+    }
+
+#if LP_OCR_DEBUG
+    printf("[OCR] #%d start roi=(%d,%d,%d,%d)\n",
+           call_id, safe.x, safe.y, safe.width, safe.height);
+#endif
+
     cv::Mat gray;
     cv::cvtColor(frame(safe).clone(), gray, cv::COLOR_BGR2GRAY);
     if (gray.rows < LP_MIN_CROP_HEIGHT) {
         int nw = (int)(gray.cols * (double)LP_MIN_CROP_HEIGHT / gray.rows);
         cv::resize(gray, gray, cv::Size(nw, LP_MIN_CROP_HEIGHT), 0, 0, cv::INTER_CUBIC);
     }
+
+    cv::Mat gray_eq;
+    cv::equalizeHist(gray, gray_eq);
+
     auto& eng = TesseractEngine::getInstance().getEngine();
-    eng.SetImage(gray.data, gray.cols, gray.rows, 1, (int)gray.step);
     eng.SetSourceResolution(LP_TESS_RESOLUTION);
-    char* raw = eng.GetUTF8Text();
-    std::string trimmed = lp_trim_normalize(raw);
-    delete[] raw;
-    lp_struct lp = match_vn_plate(g_lp_regex, trimmed);
-    if (!lp.matched || !g_lp_validator->is_valid_plate(lp)) return "";
-    return g_lp_validator->format_plate(lp);
+
+    struct OcrPass {
+        tesseract::PageSegMode psm;
+        const cv::Mat* img;
+    };
+    const OcrPass passes[] = {
+        {tesseract::PSM_SINGLE_LINE, &gray},
+        {tesseract::PSM_SINGLE_BLOCK, &gray_eq},
+        {tesseract::PSM_SPARSE_TEXT, &gray_eq},
+    };
+
+    for (const auto& pass : passes) {
+        eng.SetPageSegMode(pass.psm);
+        eng.SetImage(pass.img->data, pass.img->cols, pass.img->rows, 1, (int)pass.img->step);
+
+        char* raw = eng.GetUTF8Text();
+        std::string raw_text = raw ? std::string(raw) : std::string();
+        delete[] raw;
+
+#if LP_OCR_DEBUG
+        {
+            std::string one_line = raw_text;
+            std::replace(one_line.begin(), one_line.end(), '\n', ' ');
+            std::replace(one_line.begin(), one_line.end(), '\r', ' ');
+            if (one_line.size() > 80) one_line = one_line.substr(0, 80) + "...";
+            printf("[OCR] #%d pass psm=%d raw='%s'\n",
+                   call_id, (int)pass.psm, one_line.c_str());
+        }
+#endif
+
+        std::vector<std::string> candidates = lp_build_ocr_candidates(raw_text);
+#if LP_OCR_DEBUG
+        printf("[OCR] #%d pass psm=%d candidates=%zu\n",
+               call_id, (int)pass.psm, candidates.size());
+#endif
+        for (const auto& cand : candidates) {
+            lp_struct lp = match_vn_plate(g_lp_regex, cand);
+            if (!lp.matched) continue;
+            if (!g_lp_validator->is_valid_plate(lp)) continue;
+#if LP_OCR_DEBUG
+            printf("[OCR] #%d MATCH cand='%s' -> plate='%s'\n",
+                   call_id, cand.c_str(), g_lp_validator->format_plate(lp).c_str());
+#endif
+            return g_lp_validator->format_plate(lp);
+        }
+    }
+
+#if LP_OCR_DEBUG
+    printf("[OCR] #%d no valid LP\n", call_id);
+#endif
+
+    return "";
 }
 
 static std::vector<std::string> collectModel2ViolationLines(
@@ -322,6 +464,7 @@ static std::vector<std::string> collectModel2ViolationLines(
         if (!lane_line_violation && !red_light_violation) continue;
 
         std::string plate = "LP?";
+        bool plate_found = false;
         if (g_cfg.enable_lp_ocr && run_ocr_this_frame && det_cfg.isLP(det_cfg.class_license_plate)) {
             float best_inter = 0.f;
             cv::Rect best_lp;
@@ -339,7 +482,21 @@ static std::vector<std::string> collectModel2ViolationLines(
             }
             if (best_lp.area() > 0) {
                 std::string ocr = runLpOcr(frame, best_lp);
-                if (!ocr.empty()) plate = ocr;
+                if (!ocr.empty()) {
+                    plate = ocr;
+                    plate_found = true;
+                }
+            }
+        }
+
+        if (g_cfg.enable_lp_ocr && run_ocr_this_frame && !plate_found) {
+            cv::Rect fallback_lp = estimatePlateRectFromVehicle(veh.bbox, fw, fh);
+            if (fallback_lp.area() > 0) {
+                std::string ocr = runLpOcr(frame, fallback_lp);
+                if (!ocr.empty()) {
+                    plate = ocr;
+                    plate_found = true;
+                }
             }
         }
 
@@ -353,6 +510,118 @@ static std::vector<std::string> collectModel2ViolationLines(
         if (dedup.insert(line).second) lines.push_back(line);
     }
     return lines;
+}
+
+static std::vector<std::string> collectRedLightViolationLines(
+    const cv::Mat& frame,
+    const std::vector<detection>& dets,
+    const DetectorConfig& det_cfg,
+    bool red_light,
+    bool run_ocr_this_frame)
+{
+    std::vector<std::string> lines;
+    if (frame.empty()) return lines;
+    if (!g_cfg.violation.red_light || !red_light || !hasValidStopLine(g_cfg.scene))
+        return lines;
+
+    const int fw = frame.cols;
+    const int fh = frame.rows;
+    std::set<std::string> dedup;
+
+    for (const auto& veh : dets) {
+        if (veh.prob == 0.f || !det_cfg.isVehicle(veh.c)) continue;
+        if (!isReasonableBox(veh.bbox, fw, fh)) continue;
+
+        const RedLineState rl_state = getRedLineStateNow(veh.bbox, fh, g_cfg.scene);
+        if (rl_state == RedLineState::NONE) continue;
+
+        std::string plate = "LP:UNKNOWN";
+        bool plate_found = false;
+        if (g_cfg.enable_lp_ocr && run_ocr_this_frame && det_cfg.isLP(det_cfg.class_license_plate)) {
+            float best_inter = 0.f;
+            cv::Rect best_lp;
+            for (const auto& lp : dets) {
+                if (lp.prob == 0.f || !det_cfg.isLP(lp.c)) continue;
+                if (!isReasonableBox(lp.bbox, fw, fh)) continue;
+                float inter = lp.bbox.intersectArea(veh.bbox);
+                if (inter < lp.bbox.w * lp.bbox.h * 0.2f) continue;
+                cv::Rect lp_rect = lp.bbox.toSafeRect(fw, fh);
+                if (lp_rect.area() < 100) continue;
+                if (inter > best_inter) {
+                    best_inter = inter;
+                    best_lp = lp_rect;
+                }
+            }
+            if (best_lp.area() > 0) {
+                std::string ocr = runLpOcr(frame, best_lp);
+                if (!ocr.empty()) {
+                    plate = ocr;
+                    plate_found = true;
+                }
+            }
+        }
+
+        if (g_cfg.enable_lp_ocr && run_ocr_this_frame && !plate_found) {
+            cv::Rect fallback_lp = estimatePlateRectFromVehicle(veh.bbox, fw, fh);
+            if (fallback_lp.area() > 0) {
+                std::string ocr = runLpOcr(frame, fallback_lp);
+                if (!ocr.empty()) {
+                    plate = ocr;
+                    plate_found = true;
+                }
+            }
+        }
+
+        std::string reason = (rl_state == RedLineState::CROSS)
+                             ? "REDLINE_CROSS"
+                             : "REDLINE_TOUCH";
+        std::string line = plate + " | " + reason;
+        if (dedup.insert(line).second) lines.push_back(line);
+    }
+    return lines;
+}
+
+static std::vector<cv::Rect> collectRedLightViolationRects(
+    const std::vector<detection>& dets,
+    const DetectorConfig& det_cfg,
+    int fw, int fh,
+    bool red_light)
+{
+    std::vector<cv::Rect> rects;
+    if (!g_cfg.violation.red_light || !hasValidStopLine(g_cfg.scene) || !red_light)
+        return rects;
+
+    struct Candidate {
+        cv::Rect rect;
+        float prob;
+        float area;
+        int state_rank;
+    };
+    std::vector<Candidate> cands;
+    cands.reserve(dets.size());
+
+    for (const auto& veh : dets) {
+        if (veh.prob == 0.f || !det_cfg.isVehicle(veh.c)) continue;
+        if (!isReasonableBox(veh.bbox, fw, fh)) continue;
+        const RedLineState rl_state = getRedLineStateNow(veh.bbox, fh, g_cfg.scene);
+        if (rl_state == RedLineState::NONE) continue;
+
+        cv::Rect r = veh.bbox.toSafeRect(fw, fh);
+        if (r.area() < 100) continue;
+        cands.push_back({r, veh.prob, (float)r.area(), static_cast<int>(rl_state)});
+    }
+
+    std::sort(cands.begin(), cands.end(), [](const Candidate& a, const Candidate& b) {
+        if (a.state_rank != b.state_rank) return a.state_rank > b.state_rank;
+        if (a.prob == b.prob) return a.area > b.area;
+        return a.prob > b.prob;
+    });
+
+    const size_t kMaxCrops = 2;
+    for (size_t i = 0; i < cands.size() && i < kMaxCrops; ++i)
+        rects.push_back(cands[i].rect);
+
+    return rects;
 }
 
 /* ──────────────────────────── Draw overlay ───────────────────────────── */
@@ -466,11 +735,16 @@ static void renderToCanvas(
     const std::vector<TrackedVehicle>&  vehicles,
     const std::vector<detection>&       dets,
     const std::vector<std::string>&     labels,
+    const std::vector<std::string>&     redlight_violation_lines,
     const std::vector<std::string>&     model2_violation_lines,
     int model_idx, bool red_light,
     double infer_fps, double capture_fps,
     float prep_ms, float infer_ms)
 {
+    const auto& det_cfg = currentDisplayDetectorConfig(model_idx);
+    const std::vector<cv::Rect> redlight_crops =
+        collectRedLightViolationRects(dets, det_cfg, src.cols, src.rows, red_light);
+
     /* 1. Draw AI overlay on src in-place (src is our local copy, safe to modify) */
     drawOverlay(src, vehicles, dets, labels, model_idx, red_light, infer_fps);
 
@@ -517,35 +791,102 @@ static void renderToCanvas(
     put(std::string("Source: ") + sourceTypeName(sourceTypeFromString(g_cfg.video_source_type)),
         cv::Scalar(230,230,230));
     put("Model : " + std::to_string(model_idx + 1), cv::Scalar(230,230,230));
-    put("Cfg   : " + std::to_string(g_cfg.video_width) + "x" +
-        std::to_string(g_cfg.video_height) + " @" +
-        std::to_string(g_cfg.video_fps) + "fps", cv::Scalar(210,210,210), 0.54);
-    put("InfLim: " + std::to_string(g_cfg.inference_fps), cv::Scalar(210,210,210), 0.54);
-    put("Cap FPS: " + cv::format("%.1f", capture_fps), cv::Scalar(180,255,180));
-    put("Inf FPS: " + cv::format("%.1f", infer_fps),   cv::Scalar(0,255,255));
+    // put("Cfg   : " + std::to_string(g_cfg.video_width) + "x" +
+    //     std::to_string(g_cfg.video_height) + " @" +
+    //     std::to_string(g_cfg.video_fps) + "fps", cv::Scalar(210,210,210), 0.54);
+    // put("InfLim: " + std::to_string(g_cfg.inference_fps), cv::Scalar(210,210,210), 0.54);
+    // put("Cap FPS: " + cv::format("%.1f", capture_fps), cv::Scalar(180,255,180));
+    // put("Inf FPS: " + cv::format("%.1f", infer_fps),   cv::Scalar(0,255,255));
     put("Prep ms: " + cv::format("%.1f", prep_ms),     cv::Scalar(200,200,255));
     put("Inf ms : " + cv::format("%.1f", infer_ms),    cv::Scalar(200,200,255));
     put(std::string("Light  : ") + (red_light ? "RED" : "GO"),
         red_light ? cv::Scalar(0,0,255) : cv::Scalar(0,220,0));
     put(std::string("Track : ") + (kEnableTracking ? "ON" : "OFF"), cv::Scalar(230,230,230));
-    y += 10;
-    put("Detected:", cv::Scalar(255, 220, 0), 0.62, 2);
-    std::map<std::string, int> counts;
-    for (const auto& d : dets) {
-        if (d.prob == 0.f) continue;
-        std::string name = (d.c >= 0 && d.c < (int)labels.size())
-            ? labels[d.c] : ("cls_" + std::to_string(d.c));
-        counts[name]++;
-    }
-    if (counts.empty()) {
-        put("(none)", cv::Scalar(170,170,170));
-    } else {
-        for (const auto& kv : counts) {
-            put("- " + kv.first + ": " + std::to_string(kv.second),
-                cv::Scalar(220,220,220), 0.54);
-            if (y > IMAGE_OUTPUT_HEIGHT - 80) break;
+    y += 8;
+
+    if (model_idx == 0) {
+        put("Violation LP (M1):", cv::Scalar(255, 220, 0), 0.62, 2);
+        if (redlight_violation_lines.empty()) {
+            put("(none)", cv::Scalar(170,170,170), 0.54);
+        } else {
+            for (const auto& line : redlight_violation_lines) {
+                put("- " + line, cv::Scalar(220,220,220), 0.52);
+                if (y > IMAGE_OUTPUT_HEIGHT - 280) break;
+            }
         }
+        y += 6;
+
+        put("Red-light crop:", cv::Scalar(255, 220, 0), 0.60, 2);
+        {
+            const int thumb_x   = geom.video_w + 16;
+            const int thumb_w   = geom.panel_w - 32;
+            const int thumb_h   = 150;
+            const int thumb_gap = 2;
+            const int slot_count = 2;
+
+            for (int i = 0; i < slot_count; ++i) {
+                int slot_y = y + i * (thumb_h + thumb_gap);
+                if (slot_y + thumb_h > IMAGE_OUTPUT_HEIGHT - 110) break;
+                cv::Rect dst(thumb_x, slot_y, thumb_w, thumb_h);
+
+                /* Fixed crop slots: always keep visible frame; fill image only when available. */
+                canvas(dst).setTo(cv::Scalar(25, 25, 25));
+                cv::rectangle(canvas, dst, cv::Scalar(0, 255, 255), 2);
+
+                if (i < (int)redlight_crops.size()) {
+                    const cv::Rect& rc = redlight_crops[i];
+                    if (rc.area() <= 0) continue;
+
+                    cv::Mat src_crop = src(rc);
+                    if (src_crop.empty()) continue;
+
+                    /* Keep BB aspect ratio and avoid forced upscale.
+                     * - If crop fits slot: draw at 1:1 size (centered)
+                     * - If crop is larger: scale down uniformly to fit */
+                    const int sw = src_crop.cols;
+                    const int sh = src_crop.rows;
+                    if (sw <= 0 || sh <= 0) continue;
+
+                    double scale = std::min((double)thumb_w / sw, (double)thumb_h / sh);
+                    if (scale > 1.0) scale = 1.0; /* no upscale */
+
+                    const int rw = std::max(1, (int)std::round(sw * scale));
+                    const int rh = std::max(1, (int)std::round(sh * scale));
+                    const int rx = dst.x + (thumb_w - rw) / 2;
+                    const int ry = dst.y + (thumb_h - rh) / 2;
+
+                    cv::Mat resized;
+                    if (rw == sw && rh == sh) {
+                        resized = src_crop;
+                    } else {
+                        cv::resize(src_crop, resized, cv::Size(rw, rh), 0, 0, cv::INTER_LINEAR);
+                    }
+                    resized.copyTo(canvas(cv::Rect(rx, ry, rw, rh)));
+                    cv::rectangle(canvas, dst, cv::Scalar(0, 255, 255), 2);
+                }
+            }
+            y += slot_count * (thumb_h + thumb_gap);
+        }
+        y += 4;
     }
+
+    // put("Detected:", cv::Scalar(255, 220, 0), 0.62, 2);
+    // std::map<std::string, int> counts;
+    // for (const auto& d : dets) {
+    //     if (d.prob == 0.f) continue;
+    //     std::string name = (d.c >= 0 && d.c < (int)labels.size())
+    //         ? labels[d.c] : ("cls_" + std::to_string(d.c));
+    //     counts[name]++;
+    // }
+    // if (counts.empty()) {
+    //     put("(none)", cv::Scalar(170,170,170));
+    // } else {
+    //     for (const auto& kv : counts) {
+    //         put("- " + kv.first + ": " + std::to_string(kv.second),
+    //             cv::Scalar(220,220,220), 0.54);
+    //         if (y > IMAGE_OUTPUT_HEIGHT - 80) break;
+    //     }
+    // }
     if (model_idx == 1) {
         y += 10;
         put("Violation LP (M2):", cv::Scalar(255, 220, 0), 0.62, 2);
@@ -725,8 +1066,24 @@ void* R_Inf_Thread(void* /*threadid*/)
         TrafficLightState light = detectTrafficLight(frame, g_cfg.scene);
 
         std::vector<TrackedVehicle> disp_vehicles;
+        std::vector<std::string> redlight_lines;
         if (kEnableTracking && g_tracker) {
             disp_vehicles = g_tracker->update(dets, frame.cols, frame.rows);
+        }
+
+        {
+            bool run_ocr_this_frame = (frame_idx % LP_OCR_INTERVAL == 0);
+#if LP_OCR_DEBUG
+            if (run_ocr_this_frame) {
+                printf("[OCR] trigger frame=%d model=%d dets=%zu red=%d\n",
+                       frame_idx,
+                       g_active_model.load() + 1,
+                       dets.size(),
+                       light.red ? 1 : 0);
+            }
+#endif
+            redlight_lines = collectRedLightViolationLines(frame, dets, active_det_cfg,
+                                                           light.red, run_ocr_this_frame);
         }
 
         std::vector<std::string> model2_lines;
@@ -743,6 +1100,7 @@ void* R_Inf_Thread(void* /*threadid*/)
             g_disp.vehicles  = disp_vehicles;
             g_disp.dets      = dets;
             g_disp.labels    = labels_snapshot;
+            g_redlight_violation_lines = redlight_lines;
             g_model2_violation_lines = model2_lines;
             g_disp.red_light = light.red;
             g_disp.fps       = loop_fps;
@@ -861,6 +1219,7 @@ void* R_Display_Thread(void* /*threadid*/)
                     std::vector<TrackedVehicle> vehicles;
                     std::vector<detection> dets;
                     std::vector<std::string> labels;
+                    std::vector<std::string> redlight_lines;
                     std::vector<std::string> model2_lines;
                     bool red_light = false;
                     double fps = 0.0;
@@ -871,6 +1230,7 @@ void* R_Display_Thread(void* /*threadid*/)
                         vehicles  = g_disp.vehicles;
                         dets      = g_disp.dets;
                         labels    = g_disp.labels;
+                        redlight_lines = g_redlight_violation_lines;
                         model2_lines = g_model2_violation_lines;
                         red_light = g_disp.red_light;
                         fps       = g_disp.fps;
@@ -879,7 +1239,7 @@ void* R_Display_Thread(void* /*threadid*/)
                         model_idx = g_disp.model_idx;
                     }
                     renderToCanvas(canvas, bgra, tmp, geom,
-                                   vehicles, dets, labels, model2_lines,
+                                   vehicles, dets, labels, redlight_lines, model2_lines,
                                    model_idx, red_light, fps,
                                    g_video ? g_video->fpsMeasured() : 0.0,
                                    prep_ms, infer_ms);

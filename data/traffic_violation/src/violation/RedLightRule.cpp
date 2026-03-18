@@ -10,8 +10,8 @@
 #include <iostream>
  
 RedLightRule::RedLightRule(const SceneConfig& scene)
-    : m_stop_line_y1(scene.stop_line_y1)
-    , m_stop_line_y2(scene.stop_line_y2)
+    : m_stop_line_y1(scene.stop_line_y1) // Canh tren cua vach
+    , m_stop_line_y2(scene.stop_line_y2) // Canh duoi cua vach
     , m_stop_line_y (scene.stop_line_y2) // Đè vạch (chạm mép dưới) là vi phạm ngay
 {}
  
@@ -22,17 +22,21 @@ std::vector<ViolationEvent> RedLightRule::check(const FrameContext& ctx) {
     if (ctx.frame.empty())   return events;
  
     const float frame_h  = static_cast<float>(ctx.frame.rows);
-    const float frame_w  = static_cast<float>(ctx.frame.cols);
-    const float stop_px  = m_stop_line_y * frame_h;  
- 
+    const float stop_px  = m_stop_line_y2 * frame_h;  
+    const float mid_y = frame_h / 2.0f;
+
     // Dọn dẹp xe đã biến mất khỏi scene
     pruneStaleTracks(ctx);
  
     for (const auto& v : ctx.vehicles) {
-        float cx       = v.bbox.x;                    // tâm X
         float top_y    = v.bbox.y - v.bbox.h / 2.f;  // cạnh trên
         float bottom_y = v.bbox.y + v.bbox.h / 2.f;  // cạnh dưới (gầm xe) ← lưu vào trajectory và check crossing
  
+        if (bottom_y < mid_y || bottom_y > frame_h) {
+            // Xe ở quá cao (chưa đến vạch) hoặc quá thấp (lỗi detection) → bỏ qua
+            continue;
+        }
+        
         // ── Cập nhật history ──────────────────────────────────────────────────
         auto& hist = m_history[v.track_id];
         hist.last_seen = std::chrono::steady_clock::now();
@@ -58,15 +62,10 @@ std::vector<ViolationEvent> RedLightRule::check(const FrameContext& ctx) {
         }
  
         // ── Điều kiện 2: Xe phải VƯỢT QUA hoặc ĐÈ lên stop-line ───────────────
-        // Vùng đỏ là từ y1 đến y2. Nếu `bottom_y` (gầm xe) nằm trong vùng [y1, y2]
-        // hoặc đã vượt qua y1, thì coi là đè vạch/vượt đèn.
-        // Chú ý: Trục y tăng dần từ trên xuống dưới.
-        float y1_px = m_stop_line_y1 * frame_h;
-        float y2_px = m_stop_line_y2 * frame_h;
+        // Vi phạm xảy ra khi bottom_y đâm xuyên qua vạch stop_px (mép dưới vạch)
+        bool is_violating_now = (bottom_y <= stop_px);
         
-        // Cạnh dưới (gầm xe) phải lọt vào hoặc qua vạch trên (y1_px)
-        bool is_violating_now = (bottom_y <= y2_px);
- 
+        // Khoảnh khắc vi phạm (vừa từ dưới vạch đè lên vạch)
         bool just_crossed = hist.was_before_line && is_violating_now;
  
         // Cập nhật trạng thái cho frame sau
@@ -74,10 +73,7 @@ std::vector<ViolationEvent> RedLightRule::check(const FrameContext& ctx) {
  
         if (!just_crossed) continue;
  
-        // ── Điều kiện 3: Chạm vạch hoặc đè vạch là vi phạm ───────────────────
-        // Không yêu cầu phải vượt sâu qua vạch nữa, loại bỏ check CROSS_CONFIRM_Y
- 
-        // ── Điều kiện 4: Không tính xe đang đỗ/dừng sẵn sau vạch ────────────
+        // ── Điều kiện 3: Không tính xe đang đỗ  dừng sẵn sau vạch ────────────
         // Nếu ngay từ frame đầu xe đã ở dưới vạch → không phải crossing
         if (hist.has_crossed) continue;  // đã ghi nhận crossing này rồi
         hist.has_crossed = true;

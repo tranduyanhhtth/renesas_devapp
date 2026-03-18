@@ -13,6 +13,7 @@
 
 #include <string>
 #include <cstring>
+#include <vector>
 
 /**
  * @brief Normalize raw Tesseract output for license plate matching.
@@ -22,5 +23,14 @@
  * @return std::string  cleaned string, e.g. "51F12345"
  */
 std::string lp_trim_normalize(char* raw_text);
+
+/**
+ * @brief Generate OCR candidates from raw text, including strict VN-plate
+ *        normalization and horizontal/vertical line merge heuristics.
+ *
+ * Returned candidates are uppercased and deduplicated, ordered by confidence
+ * heuristic (strict normalized first, then cleaned raw variants).
+ */
+std::vector<std::string> lp_build_ocr_candidates(const std::string& raw_text);
 
 #endif // LP_TEXT_PROC_H

@@ -49,6 +49,20 @@ TrafficDetector::TrafficDetector(const DetectorConfig& cfg)
     }
 }
 
+static cv::Rect getBottomRightQuarterRoi(const cv::Mat& frame)
+{
+    const int fw = frame.cols;
+    const int fh = frame.rows;
+    if (fw <= 1 || fh <= 1)
+        return cv::Rect(0, 0, fw, fh);
+
+    const int w = std::max(1, fw * 2 / 3);
+    const int h = std::max(1, fh / 2);
+    const int x = std::max(0, fw - w);
+    const int y = std::max(0, fh - h);
+    return cv::Rect(x, y, w, h) & cv::Rect(0, 0, fw, fh);
+}
+
 /* ── load ─────────────────────────────────────────────────────────────────── */
 bool TrafficDetector::load(uint64_t drpai_base_addr)
 {
@@ -361,6 +375,10 @@ std::vector<detection> TrafficDetector::detect(const cv::Mat& frame)
     std::vector<detection> dets;
     if (frame.empty()) return dets;
 
+    /* Input policy: run model only on bottom-right quarter before resize. */
+    const cv::Rect infer_roi = getBottomRightQuarterRoi(frame);
+    const cv::Mat infer_src = frame(infer_roi);
+
 #ifndef WITH_DRP
     /* ── Stub mode: trả về empty (test pipeline structure) ── */
     return dets;
@@ -393,7 +411,7 @@ std::vector<detection> TrafficDetector::detect(const cv::Mat& frame)
         auto tp = std::chrono::steady_clock::now();
         const int sq = m_cfg.input_width;
         cv::Mat sq_frame;
-        cv::resize(frame, sq_frame, cv::Size(sq, sq), 0, 0, cv::INTER_LINEAR);
+        cv::resize(infer_src, sq_frame, cv::Size(sq, sq), 0, 0, cv::INTER_LINEAR);
         /* sq_frame: sq×sq BGR, stride = sq*3 bytes — exactly what PreRuntime needs */
         memcpy(m_drpai_buf->mem, sq_frame.data, (size_t)sq * sq * 3);
 
@@ -417,7 +435,7 @@ std::vector<detection> TrafficDetector::detect(const cv::Mat& frame)
             std::cerr << "[TrafficDetector] PreRuntime.Pre failed (r=" << (int)r
                       << ") → CPU fallback\n";
             std::vector<float> cpu_in;
-            cpuPreprocess(frame, cpu_in);
+            cpuPreprocess(infer_src, cpu_in);
             m_runtime.SetInput(0, cpu_in.data());
         } else {
             /* Match R01_object_detection: avoid an extra FP32 tensor copy here. */
@@ -429,7 +447,7 @@ std::vector<detection> TrafficDetector::detect(const cv::Mat& frame)
         /* CPU preprocessing */
         std::vector<float> cpu_in;
         auto tp = std::chrono::steady_clock::now();
-        cpuPreprocess(frame, cpu_in);
+        cpuPreprocess(infer_src, cpu_in);
         m_prep_ms = std::chrono::duration<float, std::milli>(
                     std::chrono::steady_clock::now() - tp).count();
         m_runtime.SetInput(0, cpu_in.data());
@@ -473,7 +491,14 @@ std::vector<detection> TrafficDetector::detect(const cv::Mat& frame)
     }
 
     /* ── Post-processing ────────────────────────────────────────────────────── */
-    postProcess(m_output_buf.data(), frame.cols, frame.rows, dets);
+    postProcess(m_output_buf.data(), infer_src.cols, infer_src.rows, dets);
+
+    /* Map detections from cropped ROI coordinates back to full-frame coordinates. */
+    for (auto& d : dets) {
+        d.bbox.x += (float)infer_roi.x;
+        d.bbox.y += (float)infer_roi.y;
+    }
+
     return dets;
 #endif
 }
