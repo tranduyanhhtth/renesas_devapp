@@ -56,7 +56,7 @@ static cv::Rect getBottomRightQuarterRoi(const cv::Mat& frame)
     if (fw <= 1 || fh <= 1)
         return cv::Rect(0, 0, fw, fh);
 
-    const int w = std::max(1, fw * 2 / 3);
+    const int w = std::max(1, fw * 2 / 3) ;
     const int h = std::max(1, fh / 2);
     const int x = std::max(0, fw - w);
     const int y = std::max(0, fh - h);

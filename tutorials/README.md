@@ -1,6 +1,4 @@
 # Compile AI models (RZ/V2L, RZ/V2M, RZ/V2MA)  
-Tôi đang gặp một vấn đề lớn giữa cần bằng độ nét và khả năng phát hiện, vì video của tôi qua góc nhìn từ trên cao nên các biển số xe máy gần như không được phát hiện vì quá bé vậy nên tôi có một ý tưởng là chỉ lấy một vùng hình vuông ở góc dưới cùng bên phải của video để đưa vào model để thực hiện object detection biết độ phân giải video hiện tại làm đầu vào dữ liệu của tôi đang là 2048x1080 giờ tôi chỉ lấy góc phần tư dưới cùng bên phải của video làm đầu vào model để cải thiện chất lượng với mong muốn model có thể detect ra biển số xe
-
 This tutorial show how to compile an onnx AI model.
 And how to compile for **RZ/V2H**, [see here](tutorial_RZV2H.md).
 

@@ -110,6 +110,8 @@ static std::vector<std::pair<std::regex, std::string>> g_lp_regex;
 static std::vector<std::string> g_model2_violation_lines;
 /* For model 1 UI: list of currently red-light violating vehicles (optionally OCR plate). */
 static std::vector<std::string> g_redlight_violation_lines;
+/* For model 1 & 2 UI: cropped vehicle rects for current red-light/lane-line violators. */
+static std::vector<cv::Rect> g_model2_crop_rects;
 
 static const DetectorConfig& currentDisplayDetectorConfig(int model_idx)
 {
@@ -624,6 +626,68 @@ static std::vector<cv::Rect> collectRedLightViolationRects(
     return rects;
 }
 
+static std::vector<cv::Rect> collectModel2ViolationRects(
+    const std::vector<detection>& dets,
+    const DetectorConfig& det_cfg,
+    int fw, int fh,
+    bool red_light)
+{
+    std::vector<cv::Rect> rects;
+
+    struct Candidate {
+        cv::Rect rect;
+        float prob;
+        float area;
+    };
+    std::vector<Candidate> cands;
+    cands.reserve(dets.size());
+
+    for (const auto& veh : dets) {
+        if (veh.prob == 0.f || !det_cfg.isVehicle(veh.c)) continue;
+        if (!isReasonableBox(veh.bbox, fw, fh)) continue;
+
+        bool violating = false;
+
+        // Kiểm tra lane line violation
+        if (g_cfg.violation.lane_line && hasValidLaneLines(g_cfg.scene)) {
+            float x_left  = veh.bbox.x - veh.bbox.w / 2.f;
+            float x_right = veh.bbox.x + veh.bbox.w / 2.f;
+            for (const auto& ll : g_cfg.scene.lane_lines) {
+                float x_line = ll.x_norm * (float)fw;
+                if ((x_line - x_left) >= (float)ll.overlap_px &&
+                    (x_right - x_line) >= (float)ll.overlap_px) {
+                    violating = true;
+                    break;
+                }
+            }
+        }
+
+        // Kiểm tra red light violation
+        if (!violating && g_cfg.violation.red_light && red_light && hasValidStopLine(g_cfg.scene)) {
+            float bottom_y = veh.bbox.y + veh.bbox.h / 2.f;
+            float y2_px = g_cfg.scene.stop_line_y2 * (float)fh;
+            if (bottom_y <= y2_px) violating = true;
+        }
+
+        if (!violating) continue;
+
+        cv::Rect r = veh.bbox.toSafeRect(fw, fh);
+        if (r.area() < 100) continue;
+        cands.push_back({r, veh.prob, (float)r.area()});
+    }
+
+    std::sort(cands.begin(), cands.end(), [](const Candidate& a, const Candidate& b) {
+        if (a.prob != b.prob) return a.prob > b.prob;
+        return a.area > b.area;
+    });
+
+    const size_t kMaxCrops = 2;
+    for (size_t i = 0; i < cands.size() && i < kMaxCrops; ++i)
+        rects.push_back(cands[i].rect);
+
+    return rects;
+}
+
 /* ──────────────────────────── Draw overlay ───────────────────────────── */
 static void drawOverlay(cv::Mat& frame,
     const std::vector<TrackedVehicle>& vehicles,
@@ -804,72 +868,6 @@ static void renderToCanvas(
     put(std::string("Track : ") + (kEnableTracking ? "ON" : "OFF"), cv::Scalar(230,230,230));
     y += 8;
 
-    if (model_idx == 0) {
-        put("Violation LP (M1):", cv::Scalar(255, 220, 0), 0.62, 2);
-        if (redlight_violation_lines.empty()) {
-            put("(none)", cv::Scalar(170,170,170), 0.54);
-        } else {
-            for (const auto& line : redlight_violation_lines) {
-                put("- " + line, cv::Scalar(220,220,220), 0.52);
-                if (y > IMAGE_OUTPUT_HEIGHT - 280) break;
-            }
-        }
-        y += 6;
-
-        put("Red-light crop:", cv::Scalar(255, 220, 0), 0.60, 2);
-        {
-            const int thumb_x   = geom.video_w + 16;
-            const int thumb_w   = geom.panel_w - 32;
-            const int thumb_h   = 150;
-            const int thumb_gap = 2;
-            const int slot_count = 2;
-
-            for (int i = 0; i < slot_count; ++i) {
-                int slot_y = y + i * (thumb_h + thumb_gap);
-                if (slot_y + thumb_h > IMAGE_OUTPUT_HEIGHT - 110) break;
-                cv::Rect dst(thumb_x, slot_y, thumb_w, thumb_h);
-
-                /* Fixed crop slots: always keep visible frame; fill image only when available. */
-                canvas(dst).setTo(cv::Scalar(25, 25, 25));
-                cv::rectangle(canvas, dst, cv::Scalar(0, 255, 255), 2);
-
-                if (i < (int)redlight_crops.size()) {
-                    const cv::Rect& rc = redlight_crops[i];
-                    if (rc.area() <= 0) continue;
-
-                    cv::Mat src_crop = src(rc);
-                    if (src_crop.empty()) continue;
-
-                    /* Keep BB aspect ratio and avoid forced upscale.
-                     * - If crop fits slot: draw at 1:1 size (centered)
-                     * - If crop is larger: scale down uniformly to fit */
-                    const int sw = src_crop.cols;
-                    const int sh = src_crop.rows;
-                    if (sw <= 0 || sh <= 0) continue;
-
-                    double scale = std::min((double)thumb_w / sw, (double)thumb_h / sh);
-                    if (scale > 1.0) scale = 1.0; /* no upscale */
-
-                    const int rw = std::max(1, (int)std::round(sw * scale));
-                    const int rh = std::max(1, (int)std::round(sh * scale));
-                    const int rx = dst.x + (thumb_w - rw) / 2;
-                    const int ry = dst.y + (thumb_h - rh) / 2;
-
-                    cv::Mat resized;
-                    if (rw == sw && rh == sh) {
-                        resized = src_crop;
-                    } else {
-                        cv::resize(src_crop, resized, cv::Size(rw, rh), 0, 0, cv::INTER_LINEAR);
-                    }
-                    resized.copyTo(canvas(cv::Rect(rx, ry, rw, rh)));
-                    cv::rectangle(canvas, dst, cv::Scalar(0, 255, 255), 2);
-                }
-            }
-            y += slot_count * (thumb_h + thumb_gap);
-        }
-        y += 4;
-    }
-
     // put("Detected:", cv::Scalar(255, 220, 0), 0.62, 2);
     // std::map<std::string, int> counts;
     // for (const auto& d : dets) {
@@ -887,18 +885,89 @@ static void renderToCanvas(
     //         if (y > IMAGE_OUTPUT_HEIGHT - 80) break;
     //     }
     // }
-    if (model_idx == 1) {
-        y += 10;
+    
+     /* 6. Violation lines + crop thumbnails — per model */
+    if (model_idx == 0) {
+        put("Violation LP (M1):", cv::Scalar(255, 220, 0), 0.62, 2);
+        if (redlight_violation_lines.empty()) {
+            put("(none)", cv::Scalar(170,170,170), 0.54);
+        } else {
+            for (const auto& line : redlight_violation_lines) {
+                put("- " + line, cv::Scalar(220,220,220), 0.52);
+                if (y > IMAGE_OUTPUT_HEIGHT - 280) break;
+            }
+        }
+        y += 6;
+        put("Red-light crop:", cv::Scalar(255, 220, 0), 0.60, 2);
+    } else {
         put("Violation LP (M2):", cv::Scalar(255, 220, 0), 0.62, 2);
         if (model2_violation_lines.empty()) {
             put("(none)", cv::Scalar(170,170,170), 0.54);
         } else {
             for (const auto& line : model2_violation_lines) {
                 put("- " + line, cv::Scalar(220,220,220), 0.52);
-                if (y > IMAGE_OUTPUT_HEIGHT - 110) break;
+                if (y > IMAGE_OUTPUT_HEIGHT - 280) break;
             }
         }
+        y += 6;
+        put("Violation crop:", cv::Scalar(255, 220, 0), 0.60, 2);
     }
+
+    /* 7. Crop thumbnail slots — shared logic for both models */
+    {
+        const std::vector<cv::Rect>& active_crops =
+            (model_idx == 0) ? redlight_crops : g_model2_crop_rects;
+
+        const int thumb_x    = geom.video_w + 16;
+        const int thumb_w    = geom.panel_w - 32;
+        const int thumb_h    = 150;
+        const int thumb_gap  = 2;
+        const int slot_count = 2;
+
+        for (int i = 0; i < slot_count; ++i) {
+            int slot_y = y + i * (thumb_h + thumb_gap);
+            if (slot_y + thumb_h > IMAGE_OUTPUT_HEIGHT - 110) break;
+            cv::Rect dst(thumb_x, slot_y, thumb_w, thumb_h);
+
+            /* Always draw the slot frame — empty or filled */
+            canvas(dst).setTo(cv::Scalar(25, 25, 25));
+            cv::rectangle(canvas, dst, cv::Scalar(0, 255, 255), 2);
+
+            if (i < (int)active_crops.size()) {
+                const cv::Rect& rc = active_crops[i];
+                if (rc.area() <= 0) continue;
+
+                cv::Mat src_crop = src(rc);
+                if (src_crop.empty()) continue;
+
+                const int sw = src_crop.cols;
+                const int sh = src_crop.rows;
+                if (sw <= 0 || sh <= 0) continue;
+
+                /* Scale down to fit slot; never upscale */
+                double scale = std::min((double)thumb_w / sw, (double)thumb_h / sh);
+                if (scale > 1.0) scale = 1.0;
+
+                const int rw = std::max(1, (int)std::round(sw * scale));
+                const int rh = std::max(1, (int)std::round(sh * scale));
+                const int rx = dst.x + (thumb_w - rw) / 2;
+                const int ry = dst.y + (thumb_h - rh) / 2;
+
+                cv::Mat resized;
+                if (rw == sw && rh == sh)
+                    resized = src_crop;
+                else
+                    cv::resize(src_crop, resized, cv::Size(rw, rh), 0, 0, cv::INTER_LINEAR);
+
+                resized.copyTo(canvas(cv::Rect(rx, ry, rw, rh)));
+                cv::rectangle(canvas, dst, cv::Scalar(0, 255, 255), 2);
+            }
+        }
+        y += slot_count * (thumb_h + thumb_gap);
+    }
+    y += 4;
+
+    /* 8. Key hints — pinned near bottom */
     y = std::max(y + 12, IMAGE_OUTPUT_HEIGHT - 92);
     put("Keys:", cv::Scalar(255, 220, 0), 0.62, 2);
     put("1: Model 1",  cv::Scalar(220,220,220), 0.54);
@@ -1093,6 +1162,12 @@ void* R_Inf_Thread(void* /*threadid*/)
                                                        light.red, run_ocr_this_frame);
         }
 
+        std::vector<cv::Rect> model2_crops;
+        if (g_active_model.load() == 1) {
+            model2_crops = collectModel2ViolationRects(
+                dets, active_det_cfg, frame.cols, frame.rows, light.red);
+        }
+
         /* 3. Publish to display thread */
         std::vector<std::string> labels_snapshot = g_detector->labels();
         {
@@ -1102,6 +1177,7 @@ void* R_Inf_Thread(void* /*threadid*/)
             g_disp.labels    = labels_snapshot;
             g_redlight_violation_lines = redlight_lines;
             g_model2_violation_lines = model2_lines;
+            g_model2_crop_rects = model2_crops;
             g_disp.red_light = light.red;
             g_disp.fps       = loop_fps;
             g_disp.prep_ms   = g_detector->lastPrepMs();
