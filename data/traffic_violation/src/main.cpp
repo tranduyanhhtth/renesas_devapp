@@ -35,6 +35,7 @@
 #include "violation/WrongLaneRule.h"
 #include "violation/LaneLineRule.h"
 #include "output/ViolationLogger.h"
+#include "streaming/StreamPipeline.h"
 
 /* OCR modules */
 #include "common/tess_module/TesseractEngine.h"
@@ -52,7 +53,6 @@
 #define WAIT_TIME          (1000)    /* idle poll interval (µs) */
 #define LP_OCR_INTERVAL    (10)      /* run OCR every N inference frames */
 #define FPS_PRINT_INTERVAL (1.0)     /* seconds between FPS prints */
-#define LP_OCR_DEBUG       (1)       /* verbose OCR pipeline log */
 
 static sem_t terminate_req_sem;  /* init=1; sem_trywait signals global stop */
 
@@ -87,12 +87,24 @@ struct DisplaySlot {
 };
 static DisplaySlot g_disp;
 
+struct StreamSlot {
+    cv::Mat          frame;       
+    std::mutex       mtx;
+    std::atomic<bool> ready{false};
+};
+static StreamSlot g_stream;
+
+static StreamPipeline* g_stream_pipeline = nullptr;
+static pthread_t stream_thread;
+
 static AppConfig  g_cfg;
 static constexpr bool kEnableTracking = false;
 static constexpr bool kEnableViolationLogging = false;
 
 static std::atomic<int> g_active_model{0};  /* 0=Model1, 1=Model2 */
 static std::atomic<int> g_model_req{-1};    /* kbhit model-switch request, -1=none */
+static std::atomic<int> g_output_mode_req{-1};  /* 0=stream, 1=display, -1=none */
+static std::atomic<OutputMode> g_output_mode{OutputMode::STREAM};
 static uint64_t         g_drpai_base{0};
 static int              g_drpai_fd{-1};     /* /dev/drpai0 kept open for app lifetime */
 
@@ -112,6 +124,11 @@ static std::vector<std::string> g_model2_violation_lines;
 static std::vector<std::string> g_redlight_violation_lines;
 /* For model 1 & 2 UI: cropped vehicle rects for current red-light/lane-line violators. */
 static std::vector<cv::Rect> g_model2_crop_rects;
+
+static const char* outputModeName(OutputMode mode)
+{
+    return (mode == OutputMode::DISPLAY) ? "DISPLAY" : "STREAM";
+}
 
 static const DetectorConfig& currentDisplayDetectorConfig(int model_idx)
 {
@@ -1069,6 +1086,17 @@ void* R_Inf_Thread(void* /*threadid*/)
         }
         if (1 != sem_check) goto inf_end;
 
+        {
+            int out_req = g_output_mode_req.exchange(-1);
+            if (out_req == 0 && g_output_mode.load() != OutputMode::STREAM) {
+                g_output_mode.store(OutputMode::STREAM);
+                printf("[Inference] Output mode switched to STREAM\n");
+            } else if (out_req == 1 && g_output_mode.load() != OutputMode::DISPLAY) {
+                g_output_mode.store(OutputMode::DISPLAY);
+                printf("[Inference] Output mode switched to DISPLAY\n");
+            }
+        }
+
         if (g_cfg.inference_fps < 0) { usleep(50000); continue; }
 
         /* Model-switch requested by kbhit thread? */
@@ -1095,6 +1123,7 @@ void* R_Inf_Thread(void* /*threadid*/)
                        req + 1, dcfg.model_dir.c_str());
             }
         }
+
         /* Rate limiter */
         if (infer_fps_limit > 0) {
             auto now = std::chrono::steady_clock::now();
@@ -1186,6 +1215,16 @@ void* R_Inf_Thread(void* /*threadid*/)
         }
         g_disp.ready.store(true);
 
+        /* 3.1. Feed stream directly — works even without Wayland display */
+        {
+            cv::Mat annotated = frame.clone();
+            drawOverlay(annotated, disp_vehicles, dets, labels_snapshot,
+                        g_active_model.load(), light.red, loop_fps);
+            std::lock_guard<std::mutex> lk(g_stream.mtx);
+            g_stream.frame = std::move(annotated);
+            g_stream.ready.store(true);
+        }
+
         /* 4. Optional video-file write */
         if (g_vwriter && g_vwriter->isOpened()) {
             cv::Mat annotated = frame.clone();
@@ -1238,14 +1277,7 @@ void* R_Display_Thread(void* /*threadid*/)
 
 #ifdef WITH_DRP
     Wayland wayland;
-    if (wayland.init(IMAGE_OUTPUT_WIDTH, IMAGE_OUTPUT_HEIGHT,
-                     IMAGE_OUTPUT_CHANNEL_BGRA) != 0)
-    {
-        fprintf(stderr, "[Display][ERROR] Wayland init failed\n");
-        goto err;
-    }
-    printf("[Display] Wayland %dx%d ready\n",
-           IMAGE_OUTPUT_WIDTH, IMAGE_OUTPUT_HEIGHT);
+    bool wayland_ready = false;
 #endif
 
     canvas.create(IMAGE_OUTPUT_HEIGHT, IMAGE_OUTPUT_WIDTH, CV_8UC3);
@@ -1277,6 +1309,27 @@ void* R_Display_Thread(void* /*threadid*/)
             goto err;
         }
         if (1 != sem_check) goto disp_end;
+
+        if (g_output_mode.load() != OutputMode::DISPLAY) {
+            usleep(WAIT_TIME * 10);
+            continue;
+        }
+
+#ifdef WITH_DRP
+        if (!wayland_ready) {
+            if (wayland.init(IMAGE_OUTPUT_WIDTH, IMAGE_OUTPUT_HEIGHT,
+                             IMAGE_OUTPUT_CHANNEL_BGRA) != 0)
+            {
+                fprintf(stderr, "[Display][WARN] Wayland init failed; forcing STREAM mode\n");
+                g_output_mode.store(OutputMode::STREAM);
+                usleep(200000);
+                continue;
+            }
+            wayland_ready = true;
+            printf("[Display] Wayland %dx%d ready\n",
+                   IMAGE_OUTPUT_WIDTH, IMAGE_OUTPUT_HEIGHT);
+        }
+#endif
 
         {
             uint64_t cur_seq = g_video ? g_video->frameSeq() : 0;
@@ -1320,6 +1373,11 @@ void* R_Display_Thread(void* /*threadid*/)
                                    g_video ? g_video->fpsMeasured() : 0.0,
                                    prep_ms, infer_ms);
                     last_disp_seq = cur_seq;
+                    {
+                        std::lock_guard<std::mutex> lk(g_stream.mtx);
+                        g_stream.frame = canvas.clone();
+                        g_stream.ready.store(true);
+                    }
                 }
             }
         }
@@ -1360,7 +1418,7 @@ err:
 
 disp_end:
 #ifdef WITH_DRP
-    wayland.exit();
+    if (wayland_ready) wayland.exit();
 #else
     cv::destroyAllWindows();
 #endif
@@ -1368,7 +1426,111 @@ disp_end:
     pthread_exit(NULL);
 }
 
-/* Non-blocking key detection: '1'/'2' for model switch, other → stop */
+void* R_Stream_Thread(void* /*threadid*/)
+{
+    int32_t sem_check = 0;
+    int8_t  ret       = 0;
+
+    const int stream_fps = std::max(1, g_cfg.output.stream_fps);
+    const auto stream_interval = std::chrono::microseconds(1000000 / stream_fps);
+    auto next_stream_tp = std::chrono::steady_clock::now();
+    bool pipeline_started = false;
+
+    printf("[Stream] Thread started → %s\n", g_cfg.output.stream_url.c_str());
+
+    while (1)
+    {
+        errno = 0;
+        ret   = sem_getvalue(&terminate_req_sem, &sem_check);
+        if (0 != ret) {
+            fprintf(stderr, "[Stream][ERROR] sem_getvalue errno=%d\n", errno);
+            goto err;
+        }
+        if (1 != sem_check) goto stream_end;
+
+        if (g_output_mode.load() != OutputMode::STREAM) {
+            if (pipeline_started && g_stream_pipeline) {
+                g_stream_pipeline->stop();
+                pipeline_started = false;
+                printf("[Stream] STREAM mode deactivated\n");
+            }
+            usleep(WAIT_TIME * 10);
+            continue;
+        }
+
+        if (!pipeline_started) {
+            if (!g_stream_pipeline || !g_stream_pipeline->start()) {
+                fprintf(stderr, "[Stream][WARN] Failed to start GStreamer pipeline (retry)\n");
+                usleep(300000);
+                continue;
+            }
+            pipeline_started = true;
+            next_stream_tp = std::chrono::steady_clock::now();
+            printf("[Stream] STREAM mode active\n");
+        }
+
+        // Rate limiter
+        {
+            auto now = std::chrono::steady_clock::now();
+            if (now < next_stream_tp) {
+                std::this_thread::sleep_until(next_stream_tp);
+            }
+            next_stream_tp = std::chrono::steady_clock::now() + stream_interval;
+        }
+
+        if (!g_stream.ready.load()) {
+            usleep(WAIT_TIME);
+            continue;
+        }
+
+        // Auto-restart if GStreamer pipeline crashed
+        if (!g_stream_pipeline->isRunning()) {
+            printf("[Stream] Pipeline stopped — restarting in 3s...\n");
+            usleep(3000000);
+            if (!g_stream_pipeline->start()) {
+                fprintf(stderr, "[Stream][WARN] Restart failed — retry\n");
+                pipeline_started = false;
+            }
+            continue;
+        }
+
+        // Pull latest rendered frame
+        cv::Mat frame;
+        {
+            std::lock_guard<std::mutex> lk(g_stream.mtx);
+            if (g_stream.frame.empty()) {
+                g_stream.ready.store(false);
+                continue;
+            }
+            frame = g_stream.frame.clone();  // shallow copy header + ref-counted data
+            g_stream.ready.store(false);
+        }
+
+        if (frame.cols != g_cfg.output.stream_width || frame.rows != g_cfg.output.stream_height) {
+            cv::Mat resized;
+            cv::resize(frame, resized,
+                       cv::Size(g_cfg.output.stream_width, g_cfg.output.stream_height),
+                       0, 0, cv::INTER_LINEAR);
+            frame = std::move(resized);
+        }
+
+        // Push to GStreamer (non-blocking, drops if pipeline is busy)
+        g_stream_pipeline->pushFrame(frame);
+    }
+
+err:
+    sem_trywait(&terminate_req_sem);
+
+stream_end:
+    if (pipeline_started && g_stream_pipeline) g_stream_pipeline->stop();
+    printf("[Stream] Thread terminated\n");
+    pthread_exit(NULL);
+}
+
+/* Non-blocking key detection:
+ *   '1'/'2' = model switch
+ *   's'/'d' = output mode switch
+ *   'q'     = stop */
 void* R_Kbhit_Thread(void* /*threadid*/)
 {
     int32_t sem_check = 0;
@@ -1380,7 +1542,9 @@ void* R_Kbhit_Thread(void* /*threadid*/)
     printf("  Keys:\n");
     printf("    '1'   → switch to Model 1 (traffic violations)\n");
     printf("    '2'   → switch to Model 2 (helmet detection)\n");
-    printf("    other → stop application\n");
+    printf("    's'   → switch output to STREAM\n");
+    printf("    'd'   → switch output to DISPLAY\n");
+    printf("    'q'   → stop application\n");
     printf("==============================================\n");
 
     errno = 0;
@@ -1418,6 +1582,23 @@ void* R_Kbhit_Thread(void* /*threadid*/)
                 } else {
                     printf("[KbHit] Already on Model 2\n");
                 }
+            } else if (c == 's' || c == 'S') {
+                if (g_output_mode.load() == OutputMode::STREAM) {
+                    printf("[KbHit] Already in STREAM mode\n");
+                } else {
+                    g_output_mode_req.store(0);
+                    printf("[KbHit] STREAM mode requested\n");
+                }
+            } else if (c == 'd' || c == 'D') {
+                if (g_output_mode.load() == OutputMode::DISPLAY) {
+                    printf("[KbHit] Already in DISPLAY mode\n");
+                } else {
+                    g_output_mode_req.store(1);
+                    printf("[KbHit] DISPLAY mode requested\n");
+                }
+            } else if (c == 'q' || c == 'Q') {
+                printf("[KbHit] Quit requested\n");
+                goto err;
             } else if (c == '\n' || c == '\r') {
                 /* bare newline from piped input – ignore */
             } else {
@@ -1455,6 +1636,7 @@ int main(int argc, char* argv[])
     int32_t create_capture = -1;
     int32_t create_inf     = -1;
     int32_t create_display = -1;
+    int32_t create_stream = -1;
 
     /* 1. Load config */
     const std::string base = exeDir();
@@ -1479,6 +1661,7 @@ int main(int argc, char* argv[])
     g_cfg.detector.pre_dir    = resolvePath(base, g_cfg.detector.pre_dir);
     g_cfg.detector.label_file = resolvePath(base, g_cfg.detector.label_file);
     g_cfg.output.save_dir     = resolvePath(base, g_cfg.output.save_dir);
+    g_output_mode.store(g_cfg.output.mode);
     if (g_cfg.detector2_enabled) {
         g_cfg.detector2.model_dir  = resolvePath(base, g_cfg.detector2.model_dir);
         g_cfg.detector2.pre_dir    = resolvePath(base, g_cfg.detector2.pre_dir);
@@ -1489,6 +1672,13 @@ int main(int argc, char* argv[])
     printf("[Main] Model    : %s\n", g_cfg.detector.model_dir.c_str());
     printf("[Main] Input    : %dx%d  fps=%d\n",
            g_cfg.video_width, g_cfg.video_height, g_cfg.video_fps);
+        printf("[Main] Output   : %s\n", outputModeName(g_output_mode.load()));
+        printf("[Main] Stream   : %s @ %dx%d %dfps bitrate=%d\n",
+            g_cfg.output.stream_url.c_str(),
+            g_cfg.output.stream_width,
+            g_cfg.output.stream_height,
+            g_cfg.output.stream_fps,
+            g_cfg.output.stream_bitrate);
 
     /* 2. DRP-AI base address */
     uint64_t drpai_base = 0;
@@ -1538,6 +1728,11 @@ int main(int argc, char* argv[])
                                     g_cfg.gstreamer_pipeline,
                                         g_cfg.video_loop,
                                         g_cfg.video_realtime);
+    g_stream_pipeline = new StreamPipeline(g_cfg.output.stream_url,
+                                           g_cfg.output.stream_fps,
+                                           g_cfg.output.stream_width,
+                                           g_cfg.output.stream_height,
+                                           g_cfg.output.stream_bitrate);
 
     if (g_engine) buildViolationRules(g_engine, 0, g_cfg);   /* load model-1 rules */
 
@@ -1601,11 +1796,21 @@ int main(int argc, char* argv[])
         goto end_threads;
     }
 
-    printf("[Main] All 4 threads running.\n");
+    create_stream = pthread_create(&stream_thread, NULL, R_Stream_Thread, NULL);
+    if (0 != create_stream) {
+        sem_trywait(&terminate_req_sem);
+        fprintf(stderr, "[Main][ERROR] Failed to create Stream thread\n");
+        ret_main = -1;
+        goto end_threads;
+    }
+
+    printf("[Main] All 5 threads running.\n");
     printf("  '1' → switch to Model 1 (traffic violations)\n");
     if (g_cfg.detector2_enabled)
         printf("  '2' → switch to Model 2 (helmet detection)\n");
-    printf("  any other key → stop\n");
+    printf("  's' → switch output to STREAM\n");
+    printf("  'd' → switch output to DISPLAY\n");
+    printf("  'q' → stop\n");
 
     /* 7. Join threads */
 end_threads:
@@ -1613,6 +1818,7 @@ end_threads:
     if (0 == create_inf)     { pthread_join(ai_inf_thread,  NULL); printf("[Main] Inference joined\n"); }
     if (0 == create_capture) { pthread_join(capture_thread, NULL); printf("[Main] Capture   joined\n"); }
     if (0 == create_kbhit)   { pthread_join(kbhit_thread,   NULL); printf("[Main] KbHit     joined\n"); }
+    if (0 == create_stream)  { pthread_join(stream_thread,  NULL); printf("[Main] Stream    joined\n"); }
 
     if (0 == sem_create) sem_destroy(&terminate_req_sem);
 
@@ -1628,6 +1834,11 @@ end_cleanup:
     if (g_drpai_fd >= 0) {
         close(g_drpai_fd);
         g_drpai_fd = -1;
+    }
+    if (g_stream_pipeline) {
+        g_stream_pipeline->stop();
+        delete g_stream_pipeline;
+        g_stream_pipeline = nullptr;
     }
 
 end_main:

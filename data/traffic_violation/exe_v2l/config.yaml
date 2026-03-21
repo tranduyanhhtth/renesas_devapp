@@ -1,15 +1,25 @@
 %YAML:1.0
 ---
 video:
-  source_type: file
-  source: CarsDrivingUnderBridge.mp4
-  width: 1920
-  height: 1080
-  fps: 12.5
-  loop: 1
-  realtime: 1
-  inference_fps: 1
+  source_type: mipi
+  source: /dev/video0
+  width: 640
+  height: 480
+  fps: 30
+  loop: true
+  realtime: true
+  inference_fps: 15
   gstreamer_pipeline: ''
+  # source_type: file
+  # source: CarsDrivingUnderBridge.mp4
+  # width: 1920
+  # height: 1080
+  # fps: 12.5
+  # loop: 1
+  # realtime: 1
+  # inference_fps: 1
+  # gstreamer_pipeline: ''
+
 detector:
   model_type: yolov3
   model_dir: models/yolov3_onnx
@@ -17,7 +27,6 @@ detector:
   label_file: models/yolov3_onnx/coco-labels-2014_2017.txt
   input_width: 416
   input_height: 416
-  drpai_freq: 2
   conf_threshold: 0.35
   nms_threshold: 0.45
   num_class: 80
@@ -52,14 +61,14 @@ detector:
   class_bus: 5
   class_person: -1
   class_license_plate: -1
+
 detector2:
   model_type: yolov8
-  model_dir: models/yolov8n_bikehelmet_onnx
-  pre_dir: models/yolov8n_bikehelmet_onnx/preprocess
+  model_dir: models/license_plate_detector
+  pre_dir: models/license_plate_detector/preprocess
   label_file: ''
   input_width: 640
   input_height: 640
-  drpai_freq: 2
   conf_threshold: 0.35
   nms_threshold: 0.45
   num_class: 4
@@ -77,10 +86,13 @@ detector2:
   class_helmet: 1
   class_no_helmet: 2
   class_license_plate: 3
+
 enable_lp_ocr: 1
+
 drpai:
   freq_index: 2
   mem_offset: 0
+
 scene:
   calibrated_for_violation: false
   stop_line:
@@ -90,7 +102,7 @@ scene:
     x: 0.9197
     y: 0.1445
     w: 0.0258
-    h: 0.124
+    h: 0.1240
   lane_zones:
     motorbike:
       x_min: 0.0
@@ -104,6 +116,7 @@ scene:
   lane_lines:
     - x_norm: 0.2853
       overlap_px: 10
+
 violation:
   rules:
     helmet: 1
@@ -112,7 +125,14 @@ violation:
     lane_line: 1
   cooldown_sec: 5.0
   confirm_frames: 3
+
 output:
+  mode: stream
+  stream_url: 'rtsp://127.0.0.1:8554/cam0'
+  stream_width: 1280
+  stream_height: 720
+  stream_fps: 15
+  stream_bitrate: 1000000
   save_dir: ./violations
   filename_pattern: '{plate}_{datetime}_{violation}'
   save_full_frame: 1

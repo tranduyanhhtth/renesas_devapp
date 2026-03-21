@@ -88,7 +88,18 @@ struct ViolationConfig {
     int   confirm_frames = 3;
 };
 
+enum class OutputMode {
+    STREAM = 0,
+    DISPLAY = 1,
+};
+
 struct OutputConfig {
+    OutputMode  mode             = OutputMode::STREAM;
+    std::string stream_url       = "rtsp://127.0.0.1:8554/cam0";
+    int         stream_width     = 1280;
+    int         stream_height    = 720;
+    int         stream_fps       = 15;
+    int         stream_bitrate   = 1500000;
     std::string save_dir         = "./violations";
     std::string filename_pattern = "{plate}_{datetime}_{violation}";
     bool        save_full_frame  = true;

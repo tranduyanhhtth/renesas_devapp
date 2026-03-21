@@ -107,6 +107,12 @@ violation:
   cooldown_sec: 5.0
   confirm_frames: 3
 output:
+  mode: stream
+  stream_url: rtsp://127.0.0.1:8554/cam0
+  stream_width: 1280
+  stream_height: 720
+  stream_fps: 15
+  stream_bitrate: 1500000
   save_dir: ./violations
   filename_pattern: '{plate}_{datetime}_{violation}'
   save_full_frame: true

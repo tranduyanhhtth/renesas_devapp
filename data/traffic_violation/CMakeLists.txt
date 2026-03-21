@@ -8,8 +8,21 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # ── Build options ─────────────────────────────────────────────────────────────
 option(WITH_DRP   "Build with DRP-AI TVM runtime" ON)
+
 # ── Find packages ─────────────────────────────────────────────────────────────
 find_package(OpenCV REQUIRED)
+find_package(PkgConfig REQUIRED)
+
+pkg_check_modules(GST REQUIRED
+    gstreamer-1.0
+    gstreamer-app-1.0
+    gstreamer-video-1.0
+)
+
+message(STATUS "GStreamer version : ${GST_VERSION}")
+message(STATUS "GStreamer CFLAGS  : ${GST_CFLAGS}")
+message(STATUS "GStreamer LDFLAGS : ${GST_LDFLAGS}")
+
 find_package(Threads REQUIRED)
 
 # yaml-cpp (header-only fallback included in 3rdparty, or system lib)
@@ -45,7 +58,6 @@ if(WITH_DRP)
 endif()
 
 # ── Tesseract OCR ─────────────────────────────────────────────────────────────
-find_package(PkgConfig REQUIRED)
 pkg_check_modules(TESSERACT REQUIRED tesseract)
 include_directories(${TESSERACT_INCLUDE_DIRS})
 
@@ -67,6 +79,7 @@ set(SOURCES
     src/violation/WrongLaneRule.cpp
     src/violation/LaneLineRule.cpp
     src/output/ViolationLogger.cpp
+    src/streaming/StreamPipeline.cpp
 )
 
 if(WITH_DRP)
@@ -79,6 +92,8 @@ endif()
 include_directories(
     ${CMAKE_SOURCE_DIR}/src
     ${OpenCV_INCLUDE_DIRS}
+    ${GST_INCLUDE_DIRS}      # ← GStreamer headers
+    $ENV{SDK}/sysroots/aarch64-poky-linux/usr/lib64/glib-2.0/include  # ← glibconfig.h
 )
 
 if(yaml-cpp_FOUND)
@@ -92,6 +107,7 @@ add_executable(traffic_violation ${SOURCES})
 target_link_libraries(traffic_violation
     PRIVATE
     ${OpenCV_LIBS}
+    ${GST_LIBRARIES}         # ← GStreamer libs
     Threads::Threads
     dl
 )

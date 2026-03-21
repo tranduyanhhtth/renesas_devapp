@@ -4,6 +4,7 @@
  ******************************************************************************/
 #include "config.h"
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <iostream>
 #include <fstream>
@@ -87,6 +88,16 @@ static bool fileNonEmpty(const std::string& path) {
     std::ifstream f(path, std::ios::binary);
     char c = 0;
     return f.get(c) && c != '\0';
+}
+
+static OutputMode parseOutputMode(const std::string& mode_raw)
+{
+    std::string mode = mode_raw;
+    std::transform(mode.begin(), mode.end(), mode.begin(), [](unsigned char ch) {
+        return static_cast<char>(std::tolower(ch));
+    });
+    if (mode == "display") return OutputMode::DISPLAY;
+    return OutputMode::STREAM;
 }
 
 AppConfig AppConfig::fromFile(const std::string& path) {
@@ -184,6 +195,12 @@ AppConfig AppConfig::fromFile(const std::string& path) {
     cfg.violation.confirm_frames = nodeInt  (fs["violation"]["confirm_frames"],  3);
     // output
     auto op = fs["output"];
+    cfg.output.mode            = parseOutputMode(nodeStr(op["mode"], "stream"));
+    cfg.output.stream_url      = nodeStr (op["stream_url"], "rtsp://127.0.0.1:8554/cam0");
+    cfg.output.stream_width    = std::max(1, nodeInt(op["stream_width"], 1280));
+    cfg.output.stream_height   = std::max(1, nodeInt(op["stream_height"], 720));
+    cfg.output.stream_fps      = std::max(1, nodeInt(op["stream_fps"], 15));
+    cfg.output.stream_bitrate  = std::max(100000, nodeInt(op["stream_bitrate"], 1500000));
     cfg.output.save_dir        = nodeStr (op["save_dir"],       "./violations");
     cfg.output.save_full_frame = nodeBool(op["save_full_frame"], true);
     cfg.output.save_json       = nodeBool(op["save_json"],       true);
